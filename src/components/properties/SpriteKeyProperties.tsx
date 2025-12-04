@@ -80,7 +80,7 @@ function FlipDropdown({
         createPortal(
           <div
             ref={dropdownRef}
-            className="fixed z-50 bg-zinc-800 border border-zinc-600 rounded shadow-lg py-1"
+            className="fixed z-50 bg-zinc-800 border border-zinc-600 rounded shadow-lg py-1 max-h-48 overflow-y-auto"
             style={{ top: position.top, left: position.left, width: position.width }}
           >
             {flipOptions.map((option) => (

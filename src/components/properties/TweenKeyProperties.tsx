@@ -120,13 +120,13 @@ export function TweenKeyProperties({ keyData }: TweenKeyPropertiesProps) {
   return (
     <div className="flex flex-col gap-3">
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-400">Name</span>
+        <span className="text-xs text-zinc-400">Event</span>
         <input
           type="text"
           value={keyData.name}
           onChange={(e) => handleUpdate({ name: e.target.value })}
           className="bg-zinc-700 rounded px-2 py-1 text-sm"
-          placeholder="tween_name"
+          placeholder="event_name"
         />
       </label>
 

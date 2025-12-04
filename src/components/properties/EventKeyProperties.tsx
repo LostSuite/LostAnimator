@@ -18,7 +18,7 @@ export function EventKeyProperties({ keyData }: EventKeyPropertiesProps) {
   return (
     <div className="flex flex-col gap-3">
       <label className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-400">Name</span>
+        <span className="text-xs text-zinc-400">Event</span>
         <input
           type="text"
           value={keyData.name}

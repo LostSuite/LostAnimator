@@ -348,7 +348,7 @@ export function Timeline() {
         id: keyId,
         time,
         duration: 0.5,
-        name: "tween",
+        name: "",
         easing: "Linear",
       });
     } else if (trackType === "event") {
@@ -356,7 +356,7 @@ export function Timeline() {
         type: "event",
         id: keyId,
         time,
-        name: "event",
+        name: "",
       });
     }
     setTrackContextMenu(null);

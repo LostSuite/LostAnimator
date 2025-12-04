@@ -1,6 +1,6 @@
 import { useRef, useEffect } from "react";
 import { useAnimator } from "../../context/AnimatorContext";
-import type { SpriteTrack } from "../../types";
+import type { SpriteTrack, SpriteKey } from "../../types";
 import { getSpriteKeyDuration } from "../../types";
 
 export function SpritePreview() {
@@ -8,38 +8,47 @@ export function SpritePreview() {
   const { getSpritesheetForKey, spritesheets, selectedAnimation, playback } =
     useAnimator();
 
-  // Find the sprite key at current time
-  const currentSpriteKey = (() => {
-    if (!selectedAnimation) return null;
+  // Find all sprite keys at current time (one per sprite track, in track order)
+  const currentSpriteKeys = (() => {
+    if (!selectedAnimation) return [];
 
-    const spriteTrack = selectedAnimation.tracks.find(
+    const spriteTracks = selectedAnimation.tracks.filter(
       (t) => t.type === "sprite"
-    ) as SpriteTrack | undefined;
-    if (!spriteTrack) return null;
+    ) as SpriteTrack[];
 
     const { currentTime } = playback;
     const animationDuration = selectedAnimation.duration;
 
-    // Sort keys by time for proper duration calculation
-    const sortedKeys = [...spriteTrack.keys].sort((a, b) => a.time - b.time);
+    const keys: SpriteKey[] = [];
 
-    // Find key that contains current time
-    for (const key of sortedKeys) {
-      const duration = getSpriteKeyDuration(key, spriteTrack, animationDuration);
-      if (currentTime >= key.time && currentTime < key.time + duration) {
-        return key;
+    for (const track of spriteTracks) {
+      // Sort keys by time for proper duration calculation
+      const sortedKeys = [...track.keys].sort((a, b) => a.time - b.time);
+
+      // Find key that contains current time
+      let foundKey: SpriteKey | null = null;
+      for (const key of sortedKeys) {
+        const duration = getSpriteKeyDuration(key, track, animationDuration);
+        if (currentTime >= key.time && currentTime < key.time + duration) {
+          foundKey = key;
+          break;
+        }
+      }
+
+      // If past all keys, use last key
+      if (!foundKey && sortedKeys.length > 0) {
+        const lastKey = sortedKeys[sortedKeys.length - 1];
+        if (currentTime >= lastKey.time) {
+          foundKey = lastKey;
+        }
+      }
+
+      if (foundKey) {
+        keys.push(foundKey);
       }
     }
 
-    // If past all keys, return last key
-    if (sortedKeys.length > 0) {
-      const lastKey = sortedKeys[sortedKeys.length - 1];
-      if (currentTime >= lastKey.time) {
-        return lastKey;
-      }
-    }
-
-    return null;
+    return keys;
   })();
 
   useEffect(() => {
@@ -63,72 +72,75 @@ export function SpritePreview() {
       }
     }
 
-    // Draw sprite if we have one
-    const spritesheetData = currentSpriteKey ? getSpritesheetForKey(currentSpriteKey) : null;
+    // Draw all sprite keys in order (first track at bottom, last on top)
+    if (currentSpriteKeys.length > 0) {
+      for (const spriteKey of currentSpriteKeys) {
+        const spritesheetData = getSpritesheetForKey(spriteKey);
+        if (!spritesheetData) continue;
 
-    if (spritesheetData && currentSpriteKey) {
-      const { config, image } = spritesheetData;
-      const { tileWidth, tileHeight } = config;
-      const [col, row] = currentSpriteKey.frame;
+        const { config, image } = spritesheetData;
+        const { tileWidth, tileHeight } = config;
+        const [col, row] = spriteKey.frame;
 
-      // Calculate source position
-      const sx = col * tileWidth;
-      const sy = row * tileHeight;
+        // Calculate source position
+        const sx = col * tileWidth;
+        const sy = row * tileHeight;
 
-      // Calculate destination (centered)
-      const scale = Math.min(
-        (canvas.width - 32) / tileWidth,
-        (canvas.height - 32) / tileHeight,
-        4
-      );
-      const dw = tileWidth * scale;
-      const dh = tileHeight * scale;
-      const dx = (canvas.width - dw) / 2;
-      const dy = (canvas.height - dh) / 2;
-
-      // Handle flipping
-      ctx.save();
-      ctx.imageSmoothingEnabled = false;
-
-      if (currentSpriteKey.flip) {
-        const flipH =
-          currentSpriteKey.flip === "horizontal" ||
-          currentSpriteKey.flip === "both";
-        const flipV =
-          currentSpriteKey.flip === "vertical" ||
-          currentSpriteKey.flip === "both";
-
-        ctx.translate(
-          flipH ? dx + dw : dx,
-          flipV ? dy + dh : dy
+        // Calculate destination (centered)
+        const scale = Math.min(
+          (canvas.width - 32) / tileWidth,
+          (canvas.height - 32) / tileHeight,
+          4
         );
-        ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
-        ctx.drawImage(
-          image,
-          sx,
-          sy,
-          tileWidth,
-          tileHeight,
-          0,
-          0,
-          dw,
-          dh
-        );
-      } else {
-        ctx.drawImage(
-          image,
-          sx,
-          sy,
-          tileWidth,
-          tileHeight,
-          dx,
-          dy,
-          dw,
-          dh
-        );
+        const dw = tileWidth * scale;
+        const dh = tileHeight * scale;
+        const dx = (canvas.width - dw) / 2;
+        const dy = (canvas.height - dh) / 2;
+
+        // Handle flipping
+        ctx.save();
+        ctx.imageSmoothingEnabled = false;
+
+        if (spriteKey.flip) {
+          const flipH =
+            spriteKey.flip === "horizontal" ||
+            spriteKey.flip === "both";
+          const flipV =
+            spriteKey.flip === "vertical" ||
+            spriteKey.flip === "both";
+
+          ctx.translate(
+            flipH ? dx + dw : dx,
+            flipV ? dy + dh : dy
+          );
+          ctx.scale(flipH ? -1 : 1, flipV ? -1 : 1);
+          ctx.drawImage(
+            image,
+            sx,
+            sy,
+            tileWidth,
+            tileHeight,
+            0,
+            0,
+            dw,
+            dh
+          );
+        } else {
+          ctx.drawImage(
+            image,
+            sx,
+            sy,
+            tileWidth,
+            tileHeight,
+            dx,
+            dy,
+            dw,
+            dh
+          );
+        }
+
+        ctx.restore();
       }
-
-      ctx.restore();
     } else if (spritesheets.length === 0) {
       // No spritesheet loaded
       ctx.fillStyle = "#71717a";
@@ -140,7 +152,7 @@ export function SpritePreview() {
         canvas.height / 2
       );
     }
-  }, [getSpritesheetForKey, spritesheets, currentSpriteKey]);
+  }, [getSpritesheetForKey, spritesheets, currentSpriteKeys]);
 
   return (
     <div className="flex-1 flex items-center justify-center p-2 min-h-0">

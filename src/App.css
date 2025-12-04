@@ -1,0 +1,44 @@
+/* App-specific styles */
+
+/* Remove default focus outline for buttons and replace with subtle style */
+button:focus-visible {
+  outline: 1px solid rgba(59, 130, 246, 0.5);
+  outline-offset: 1px;
+}
+
+/* Number input spinner styling */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  opacity: 0.5;
+}
+
+input[type="number"]:hover::-webkit-inner-spin-button,
+input[type="number"]:hover::-webkit-outer-spin-button {
+  opacity: 1;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(113, 113, 122, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(113, 113, 122, 0.7);
+}
+
+/* Custom checkbox styling */
+input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: rgb(59, 130, 246);
+}

@@ -1,4 +1,18 @@
 import { useState, useRef, useEffect } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { useAnimator } from "../../context/AnimatorContext";
 import { AnimationListItem } from "./AnimationListItem";
 
@@ -20,8 +34,18 @@ export function AnimationList() {
   const { animations, addAnimation, removeAnimation, updateAnimation, reorderAnimations } = useAnimator();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Close context menu when clicking outside
   useEffect(() => {
@@ -56,32 +80,14 @@ export function AnimationList() {
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", index.toString());
-  };
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverIndex(index);
-  };
-
-  const handleDragLeave = () => {
-    setDragOverIndex(null);
-  };
-
-  const handleDrop = (e: React.DragEvent, toIndex: number) => {
-    e.preventDefault();
-    const fromIndex = parseInt(e.dataTransfer.getData("text/plain"), 10);
-    if (!isNaN(fromIndex)) {
-      reorderAnimations(fromIndex, toIndex);
+    if (over && active.id !== over.id) {
+      const oldIndex = animations.findIndex((a) => a.id === active.id);
+      const newIndex = animations.findIndex((a) => a.id === over.id);
+      reorderAnimations(oldIndex, newIndex);
     }
-    setDragOverIndex(null);
-  };
-
-  const handleDragEnd = () => {
-    setDragOverIndex(null);
   };
 
   return (
@@ -102,30 +108,34 @@ export function AnimationList() {
             No animations yet
           </div>
         ) : (
-          <div className="px-1 pb-1">
-            {animations.map((animation, index) => (
-              <AnimationListItem
-                key={animation.id}
-                animation={animation}
-                index={index}
-                isEditing={editingId === animation.id}
-                isDragOver={dragOverIndex === index}
-                onContextMenu={(e) => handleContextMenu(e, animation.id)}
-                onEditComplete={(newName) => {
-                  if (newName.trim()) {
-                    updateAnimation(animation.id, { name: newName.trim() });
-                  }
-                  setEditingId(null);
-                }}
-                onEditCancel={() => setEditingId(null)}
-                onDragStart={(e) => handleDragStart(e, index)}
-                onDragOver={(e) => handleDragOver(e, index)}
-                onDragLeave={handleDragLeave}
-                onDrop={(e) => handleDrop(e, index)}
-                onDragEnd={handleDragEnd}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={animations.map((a) => a.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="px-1 pb-1">
+                {animations.map((animation) => (
+                  <AnimationListItem
+                    key={animation.id}
+                    animation={animation}
+                    isEditing={editingId === animation.id}
+                    onContextMenu={(e) => handleContextMenu(e, animation.id)}
+                    onEditComplete={(newName) => {
+                      if (newName.trim()) {
+                        updateAnimation(animation.id, { name: newName.trim() });
+                      }
+                      setEditingId(null);
+                    }}
+                    onEditCancel={() => setEditingId(null)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 

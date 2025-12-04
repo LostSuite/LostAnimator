@@ -1,4 +1,6 @@
 import { useRef, useEffect } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useAnimator } from "../../context/AnimatorContext";
 import type { Spritesheet } from "../../types";
 
@@ -16,6 +18,21 @@ export function SpritesheetListItem({
   const { spritesheetImages } = useAnimator();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const image = spritesheetImages.get(spritesheet.id);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: spritesheet.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   // Draw thumbnail
   useEffect(() => {
@@ -52,9 +69,13 @@ export function SpritesheetListItem({
 
   return (
     <div
-      className="flex items-center px-2 py-1.5 hover:bg-zinc-700/50 rounded mx-1 cursor-pointer gap-2"
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center px-2 py-1.5 hover:bg-zinc-700/50 rounded mx-1 cursor-grab active:cursor-grabbing gap-2"
       onDoubleClick={onDoubleClick}
       onContextMenu={(e) => onContextMenu(e, spritesheet.id)}
+      {...attributes}
+      {...listeners}
     >
       <canvas
         ref={canvasRef}

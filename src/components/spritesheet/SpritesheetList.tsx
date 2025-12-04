@@ -1,4 +1,18 @@
 import { useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { useAnimator } from "../../context/AnimatorContext";
 import { SpritesheetListItem } from "./SpritesheetListItem";
 
@@ -25,9 +39,20 @@ interface ContextMenuState {
 }
 
 export function SpritesheetList() {
-  const { spritesheets, addSpritesheet, removeSpritesheet, selectSpritesheet } =
+  const { spritesheets, addSpritesheet, removeSpritesheet, reorderSpritesheets, selectSpritesheet } =
     useAnimator();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleContextMenu = (e: React.MouseEvent, spritesheetId: string) => {
     e.preventDefault();
@@ -42,6 +67,16 @@ export function SpritesheetList() {
   };
 
   const closeContextMenu = () => setContextMenu(null);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = spritesheets.findIndex((s) => s.id === active.id);
+      const newIndex = spritesheets.findIndex((s) => s.id === over.id);
+      reorderSpritesheets(oldIndex, newIndex);
+    }
+  };
 
   return (
     <div className="flex flex-col min-h-0" onClick={closeContextMenu}>
@@ -68,14 +103,25 @@ export function SpritesheetList() {
             Click + to add one.
           </div>
         ) : (
-          spritesheets.map((spritesheet) => (
-            <SpritesheetListItem
-              key={spritesheet.id}
-              spritesheet={spritesheet}
-              onDoubleClick={() => selectSpritesheet(spritesheet.id)}
-              onContextMenu={handleContextMenu}
-            />
-          ))
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={spritesheets.map((s) => s.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {spritesheets.map((spritesheet) => (
+                <SpritesheetListItem
+                  key={spritesheet.id}
+                  spritesheet={spritesheet}
+                  onDoubleClick={() => selectSpritesheet(spritesheet.id)}
+                  onContextMenu={handleContextMenu}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         )}
       </div>
 

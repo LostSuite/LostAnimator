@@ -9,7 +9,22 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            // Build the App menu (macOS requires this as first menu)
+            let app_menu = SubmenuBuilder::new(app, "Lost Animator")
+                .item(&PredefinedMenuItem::about(app, Some("About Lost Animator"), None)?)
+                .separator()
+                .item(&PredefinedMenuItem::services(app, Some("Services"))?)
+                .separator()
+                .item(&PredefinedMenuItem::hide(app, Some("Hide Lost Animator"))?)
+                .item(&PredefinedMenuItem::hide_others(app, Some("Hide Others"))?)
+                .item(&PredefinedMenuItem::show_all(app, Some("Show All"))?)
+                .separator()
+                .item(&PredefinedMenuItem::quit(app, Some("Quit Lost Animator"))?)
+                .build()?;
+
             // Build the File menu
             let new_file = MenuItemBuilder::with_id("new", "New")
                 .accelerator("CmdOrCtrl+N")
@@ -66,10 +81,17 @@ pub fn run() {
                 .item(&PredefinedMenuItem::close_window(app, Some("Close"))?)
                 .build()?;
 
+            // Build the Help menu
+            let check_updates = MenuItemBuilder::with_id("check_updates", "Check for Updates...")
+                .build(app)?;
+            let help_menu = SubmenuBuilder::new(app, "Help")
+                .item(&check_updates)
+                .build()?;
+
             // Build the complete menu
             let menu = Menu::with_items(
                 app,
-                &[&file_menu, &edit_menu, &view_menu, &window_menu],
+                &[&app_menu, &file_menu, &edit_menu, &view_menu, &window_menu, &help_menu],
             )?;
 
             app.set_menu(menu)?;
@@ -95,6 +117,9 @@ pub fn run() {
                     }
                     "redo" => {
                         let _ = window.emit("menu-redo", ());
+                    }
+                    "check_updates" => {
+                        let _ = window.emit("menu-check-updates", ());
                     }
                     _ => {}
                 }

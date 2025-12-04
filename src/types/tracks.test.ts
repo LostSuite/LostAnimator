@@ -13,27 +13,30 @@ import {
 describe("track creators", () => {
   describe("createSpriteTrack", () => {
     it("creates a sprite track with correct type", () => {
-      const track = createSpriteTrack("track-1");
+      const track = createSpriteTrack("track-1", "Sprite");
       expect(track.type).toBe("sprite");
       expect(track.id).toBe("track-1");
+      expect(track.name).toBe("Sprite");
       expect(track.keys).toEqual([]);
     });
   });
 
   describe("createTweenTrack", () => {
     it("creates a tween track with correct type", () => {
-      const track = createTweenTrack("track-2");
+      const track = createTweenTrack("track-2", "Tween");
       expect(track.type).toBe("tween");
       expect(track.id).toBe("track-2");
+      expect(track.name).toBe("Tween");
       expect(track.keys).toEqual([]);
     });
   });
 
   describe("createEventTrack", () => {
     it("creates an event track with correct type", () => {
-      const track = createEventTrack("track-3");
+      const track = createEventTrack("track-3", "Event");
       expect(track.type).toBe("event");
       expect(track.id).toBe("track-3");
+      expect(track.name).toBe("Event");
       expect(track.keys).toEqual([]);
     });
   });
@@ -97,12 +100,12 @@ describe("getKeyEndTime", () => {
 
 describe("getTrackDuration", () => {
   it("returns 0 for empty tracks", () => {
-    const track = createSpriteTrack("id");
+    const track = createSpriteTrack("id", "Test");
     expect(getTrackDuration(track)).toBe(0);
   });
 
   it("returns the time of the last sprite key", () => {
-    const track = createSpriteTrack("id");
+    const track = createSpriteTrack("id", "Test");
     track.keys.push(createSpriteKey("k1", 0, [0, 0]));
     track.keys.push(createSpriteKey("k2", 0.5, [1, 0]));
     // Sprite keys no longer have duration, so max is just the last time
@@ -110,7 +113,7 @@ describe("getTrackDuration", () => {
   });
 
   it("handles keys that are not in chronological order", () => {
-    const track = createSpriteTrack("id");
+    const track = createSpriteTrack("id", "Test");
     track.keys.push(createSpriteKey("k1", 2, [0, 0]));
     track.keys.push(createSpriteKey("k2", 0, [1, 0]));
     // Max time is 2 (sprite keys have no duration)
@@ -118,14 +121,14 @@ describe("getTrackDuration", () => {
   });
 
   it("handles event tracks correctly", () => {
-    const track = createEventTrack("id");
+    const track = createEventTrack("id", "Test");
     track.keys.push(createEventKey("k1", 1, "start"));
     track.keys.push(createEventKey("k2", 3, "end"));
     expect(getTrackDuration(track)).toBe(3);
   });
 
   it("handles tween tracks with duration", () => {
-    const track = createTweenTrack("id");
+    const track = createTweenTrack("id", "Test");
     track.keys.push(createTweenKey("k1", 0, 0.5, "scale"));
     track.keys.push(createTweenKey("k2", 1, 0.5, "fade"));
     // Tween keys have duration, so max end time is 1 + 0.5 = 1.5

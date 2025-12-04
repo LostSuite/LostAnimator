@@ -1,72 +1,98 @@
-// Discriminated union for track types
-export type Track = SpriteTrack | TweenTrack | EventTrack;
+import { z } from "zod";
 
-export interface SpriteTrack {
-  type: "sprite";
-  id: string;
-  keys: SpriteKey[];
+// Easing types
+export const EasingTypeSchema = z.enum([
+  "Linear",
+  "EaseIn",
+  "EaseOut",
+  "EaseInOut",
+  "BounceIn",
+  "BounceOut",
+]);
+export type EasingType = z.infer<typeof EasingTypeSchema>;
+
+// Key schemas
+export const SpriteKeySchema = z.object({
+  type: z.literal("sprite"),
+  id: z.string(),
+  time: z.number(),
+  frame: z.tuple([z.number(), z.number()]),
+  spritesheetId: z.string().optional(),
+  flip: z.enum(["horizontal", "vertical", "both"]).optional(),
+});
+export type SpriteKey = z.infer<typeof SpriteKeySchema>;
+
+export const TweenKeySchema = z.object({
+  type: z.literal("tween"),
+  id: z.string(),
+  time: z.number(),
+  duration: z.number(),
+  name: z.string(),
+  easing: EasingTypeSchema,
+});
+export type TweenKey = z.infer<typeof TweenKeySchema>;
+
+export const EventKeySchema = z.object({
+  type: z.literal("event"),
+  id: z.string(),
+  time: z.number(),
+  name: z.string(),
+});
+export type EventKey = z.infer<typeof EventKeySchema>;
+
+export const KeySchema = z.discriminatedUnion("type", [
+  SpriteKeySchema,
+  TweenKeySchema,
+  EventKeySchema,
+]);
+export type Key = z.infer<typeof KeySchema>;
+
+// Track schemas
+export const SpriteTrackSchema = z.object({
+  type: z.literal("sprite"),
+  id: z.string(),
+  name: z.string(),
+  keys: z.array(SpriteKeySchema),
+});
+export type SpriteTrack = z.infer<typeof SpriteTrackSchema>;
+
+export const TweenTrackSchema = z.object({
+  type: z.literal("tween"),
+  id: z.string(),
+  name: z.string(),
+  keys: z.array(TweenKeySchema),
+});
+export type TweenTrack = z.infer<typeof TweenTrackSchema>;
+
+export const EventTrackSchema = z.object({
+  type: z.literal("event"),
+  id: z.string(),
+  name: z.string(),
+  keys: z.array(EventKeySchema),
+});
+export type EventTrack = z.infer<typeof EventTrackSchema>;
+
+export const TrackSchema = z.discriminatedUnion("type", [
+  SpriteTrackSchema,
+  TweenTrackSchema,
+  EventTrackSchema,
+]);
+export type Track = z.infer<typeof TrackSchema>;
+
+export const TrackTypeSchema = z.enum(["sprite", "tween", "event"]);
+export type TrackType = z.infer<typeof TrackTypeSchema>;
+
+// Factory functions
+export function createSpriteTrack(id: string, name: string): SpriteTrack {
+  return { type: "sprite", id, name, keys: [] };
 }
 
-export interface TweenTrack {
-  type: "tween";
-  id: string;
-  keys: TweenKey[];
+export function createTweenTrack(id: string, name: string): TweenTrack {
+  return { type: "tween", id, name, keys: [] };
 }
 
-export interface EventTrack {
-  type: "event";
-  id: string;
-  keys: EventKey[];
-}
-
-// Discriminated union for key types
-export type Key = SpriteKey | TweenKey | EventKey;
-
-export interface SpriteKey {
-  type: "sprite";
-  id: string;
-  time: number;
-  frame: [number, number]; // [column, row] in grid
-  spritesheetId?: string;  // Which spritesheet to use (defaults to first)
-  flip?: "horizontal" | "vertical" | "both";
-}
-
-export interface TweenKey {
-  type: "tween";
-  id: string;
-  time: number;
-  duration: number;
-  name: string;
-  easing: EasingType;
-}
-
-export interface EventKey {
-  type: "event";
-  id: string;
-  time: number;
-  name: string;
-}
-
-export type EasingType =
-  | "Linear"
-  | "EaseIn"
-  | "EaseOut"
-  | "EaseInOut"
-  | "BounceIn"
-  | "BounceOut";
-
-export type TrackType = "sprite" | "tween" | "event";
-
-export function createSpriteTrack(id: string): SpriteTrack {
-  return { type: "sprite", id, keys: [] };
-}
-
-export function createTweenTrack(id: string): TweenTrack {
-  return { type: "tween", id, keys: [] };
-}
-
-export function createEventTrack(id: string): EventTrack {
-  return { type: "event", id, keys: [] };
+export function createEventTrack(id: string, name: string): EventTrack {
+  return { type: "event", id, name, keys: [] };
 }
 
 export function createSpriteKey(
@@ -91,9 +117,9 @@ export function createEventKey(id: string, time: number, name: string): EventKey
   return { type: "event", id, time, name };
 }
 
+// Utility functions
 export function getKeyEndTime(key: Key): number {
   if (key.type === "event" || key.type === "sprite") {
-    // Events and sprite keys are markers (no inherent duration)
     return key.time;
   }
   return key.time + key.duration;
@@ -104,26 +130,19 @@ export function getTrackDuration(track: Track): number {
   return Math.max(...track.keys.map(getKeyEndTime));
 }
 
-/**
- * Calculate the duration of a sprite key based on the next key in the track
- * or the animation's total duration if it's the last key.
- */
 export function getSpriteKeyDuration(
   key: SpriteKey,
   track: SpriteTrack,
   animationDuration: number
 ): number {
-  // Sort keys by time
   const sortedKeys = [...track.keys].sort((a, b) => a.time - b.time);
   const keyIndex = sortedKeys.findIndex((k) => k.id === key.id);
 
   if (keyIndex === -1) return 0;
 
-  // If there's a next key, duration is until that key
   if (keyIndex < sortedKeys.length - 1) {
     return sortedKeys[keyIndex + 1].time - key.time;
   }
 
-  // Otherwise, duration is until the animation ends
   return Math.max(0, animationDuration - key.time);
 }

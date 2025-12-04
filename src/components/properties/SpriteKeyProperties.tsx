@@ -1,6 +1,108 @@
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useAnimator } from "../../context/AnimatorContext";
 import { DragNumberInput } from "../ui/DragNumberInput";
 import type { SpriteKey } from "../../types";
+
+type FlipValue = "horizontal" | "vertical" | "both" | undefined;
+
+const flipOptions: { value: FlipValue; label: string }[] = [
+  { value: undefined, label: "None" },
+  { value: "horizontal", label: "Horizontal" },
+  { value: "vertical", label: "Vertical" },
+  { value: "both", label: "Both" },
+];
+
+function FlipDropdown({
+  value,
+  onChange,
+}: {
+  value: FlipValue;
+  onChange: (value: FlipValue) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({ top: 0, left: 0, width: 0 });
+
+  const selectedOption = flipOptions.find((opt) => opt.value === value) ?? flipOptions[0];
+
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        buttonRef.current &&
+        !buttonRef.current.contains(e.target as Node) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [isOpen]);
+
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[10px] text-zinc-500 uppercase">Flip</span>
+      <button
+        ref={buttonRef}
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-2 py-1 text-xs text-left bg-zinc-700/50 border border-zinc-600/50 rounded hover:border-zinc-500 flex items-center justify-between"
+      >
+        <span className="text-zinc-300">{selectedOption.label}</span>
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className={`text-zinc-500 transition-transform ${isOpen ? "rotate-180" : ""}`}
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {isOpen &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            className="fixed z-50 bg-zinc-800 border border-zinc-600 rounded shadow-lg py-1"
+            style={{ top: position.top, left: position.left, width: position.width }}
+          >
+            {flipOptions.map((option) => (
+              <button
+                key={option.label}
+                onClick={() => {
+                  onChange(option.value);
+                  setIsOpen(false);
+                }}
+                className={`w-full px-2 py-1 text-xs text-left hover:bg-zinc-700 ${
+                  option.value === value ? "text-blue-400" : "text-zinc-300"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>,
+          document.body
+        )}
+    </div>
+  );
+}
 
 interface SpriteKeyPropertiesProps {
   keyData: SpriteKey;
@@ -30,26 +132,6 @@ export function SpriteKeyProperties({ keyData }: SpriteKeyPropertiesProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      <h4 className="text-xs text-zinc-400 uppercase">Sprite Key</h4>
-
-      {/* Spritesheet selector - only show if multiple spritesheets */}
-      {spritesheets.length > 1 && (
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-400">Spritesheet</span>
-          <select
-            value={currentSpritesheetId ?? ""}
-            onChange={(e) => handleUpdate({ spritesheetId: e.target.value })}
-            className="bg-zinc-700 rounded px-2 py-1 text-sm"
-          >
-            {spritesheets.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-
       <DragNumberInput
         value={keyData.time}
         onChange={(time) => handleUpdate({ time })}
@@ -63,8 +145,8 @@ export function SpriteKeyProperties({ keyData }: SpriteKeyPropertiesProps) {
       <div className="grid grid-cols-2 gap-2">
         <DragNumberInput
           value={keyData.frame[0]}
-          onChange={(x) => handleUpdate({ frame: [x, keyData.frame[1]] })}
-          onInput={(x) => handleUpdate({ frame: [x, keyData.frame[1]] })}
+          onChange={(x) => handleUpdate({ frame: [Math.round(x), keyData.frame[1]] })}
+          onInput={(x) => handleUpdate({ frame: [Math.round(x), keyData.frame[1]] })}
           min={0}
           max={maxFrameX}
           dragSpeed={0.1}
@@ -73,8 +155,8 @@ export function SpriteKeyProperties({ keyData }: SpriteKeyPropertiesProps) {
         />
         <DragNumberInput
           value={keyData.frame[1]}
-          onChange={(y) => handleUpdate({ frame: [keyData.frame[0], y] })}
-          onInput={(y) => handleUpdate({ frame: [keyData.frame[0], y] })}
+          onChange={(y) => handleUpdate({ frame: [keyData.frame[0], Math.round(y)] })}
+          onInput={(y) => handleUpdate({ frame: [keyData.frame[0], Math.round(y)] })}
           min={0}
           max={maxFrameY}
           dragSpeed={0.1}
@@ -83,25 +165,10 @@ export function SpriteKeyProperties({ keyData }: SpriteKeyPropertiesProps) {
         />
       </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-400">Flip</span>
-        <select
-          value={keyData.flip || ""}
-          onChange={(e) =>
-            handleUpdate({
-              flip: e.target.value
-                ? (e.target.value as "horizontal" | "vertical" | "both")
-                : undefined,
-            })
-          }
-          className="bg-zinc-700 rounded px-2 py-1 text-sm"
-        >
-          <option value="">None</option>
-          <option value="horizontal">Horizontal</option>
-          <option value="vertical">Vertical</option>
-          <option value="both">Both</option>
-        </select>
-      </label>
+      <FlipDropdown
+        value={keyData.flip}
+        onChange={(flip) => handleUpdate({ flip })}
+      />
     </div>
   );
 }

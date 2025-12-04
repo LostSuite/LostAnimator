@@ -13,7 +13,7 @@ export function TimelineHeader({ duration, animationDuration, pixelsPerSecond }:
   return (
     <div className="h-8 border-b border-zinc-700 flex">
       {/* Track label column */}
-      <div className="w-[100px] flex-shrink-0 bg-zinc-800" />
+      <div className="w-[140px] flex-shrink-0 bg-zinc-800" />
 
       {/* Time ruler */}
       <div

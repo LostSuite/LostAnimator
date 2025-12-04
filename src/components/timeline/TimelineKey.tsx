@@ -28,7 +28,7 @@ export function TimelineKey({
     selection.trackId === trackId &&
     selection.keyId === keyData.id;
 
-  const left = timeToPixel(keyData.time, pixelsPerSecond);
+  const timePosition = timeToPixel(keyData.time, pixelsPerSecond);
 
   // Calculate width based on key type
   const isEvent = keyData.type === "event";
@@ -43,6 +43,9 @@ export function TimelineKey({
   } else {
     width = 12; // Fallback
   }
+
+  // Center event/sprite markers on their trigger time, tween keys start at their time
+  const left = (isEvent || isSprite) ? timePosition - width / 2 : timePosition;
 
   // Whether this key type can be resized (only tween keys)
   const canResize = keyData.type === "tween";

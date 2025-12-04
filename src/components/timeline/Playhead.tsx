@@ -7,7 +7,7 @@ interface PlayheadProps {
 }
 
 export function Playhead({ currentTime, pixelsPerSecond, height }: PlayheadProps) {
-  const left = timeToPixel(currentTime, pixelsPerSecond) + 100; // 100px offset for track labels
+  const left = timeToPixel(currentTime, pixelsPerSecond) + 140; // 140px offset for track labels
 
   return (
     <div

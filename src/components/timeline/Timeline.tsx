@@ -96,6 +96,8 @@ export function Timeline() {
     setCurrentTime,
     updateAnimation,
     spritesheets,
+    setSnapToGrid,
+    setGridSize,
   } = useAnimator();
 
   const lastTimeRef = useRef<number>(0);
@@ -367,6 +369,33 @@ export function Timeline() {
           label="Duration"
           layout="horizontal"
         />
+
+        <div className="w-px h-5 bg-zinc-600 mx-1" />
+
+        {/* Snap controls */}
+        <label className="flex items-center gap-1.5 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={timeline.snapToGrid}
+            onChange={(e) => setSnapToGrid(e.target.checked)}
+            className="w-3 h-3 rounded border-zinc-600 bg-zinc-700 text-blue-500 focus:ring-0 focus:ring-offset-0"
+          />
+          <span className="text-xs text-zinc-400">Snap</span>
+        </label>
+        <div className={timeline.snapToGrid ? "" : "opacity-40 pointer-events-none"}>
+          <DragNumberInput
+            value={timeline.gridSize}
+            onChange={setGridSize}
+            onInput={setGridSize}
+            min={0.01}
+            max={1}
+            dragSpeed={0.005}
+            precision={2}
+            label="Step"
+            layout="horizontal"
+          />
+        </div>
+
         <div className="relative">
           <select
             onChange={(e) => addTrack(e.target.value as "sprite" | "tween" | "event")}
@@ -408,6 +437,8 @@ export function Timeline() {
                 track={track}
                 pixelsPerSecond={timeline.zoom}
                 animationDuration={totalDuration}
+                snapToGrid={timeline.snapToGrid}
+                gridSize={timeline.gridSize}
                 onTrackContextMenu={handleTrackContextMenu}
                 onKeyContextMenu={handleKeyContextMenu}
               />

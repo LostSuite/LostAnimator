@@ -96,6 +96,8 @@ interface AnimatorContextType {
   timeline: TimelineViewState;
   setTimelineZoom: (zoom: number) => void;
   setTimelineScroll: (scrollX: number) => void;
+  setSnapToGrid: (enabled: boolean) => void;
+  setGridSize: (size: number) => void;
 
   // Undo/Redo
   undo: () => void;
@@ -564,6 +566,14 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
     setTimeline((t) => ({ ...t, scrollX: Math.max(0, scrollX) }));
   }, []);
 
+  const setSnapToGrid = useCallback((enabled: boolean) => {
+    setTimeline((t) => ({ ...t, snapToGrid: enabled }));
+  }, []);
+
+  const setGridSize = useCallback((size: number) => {
+    setTimeline((t) => ({ ...t, gridSize: Math.max(0.01, size) }));
+  }, []);
+
   // Listen for menu events from Tauri
   useEffect(() => {
     const unlisteners: (() => void)[] = [];
@@ -638,6 +648,8 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
     timeline,
     setTimelineZoom,
     setTimelineScroll,
+    setSnapToGrid,
+    setGridSize,
 
     // Undo/Redo
     undo: undoControls.undo,

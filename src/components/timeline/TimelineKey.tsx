@@ -6,10 +6,19 @@ interface TimelineKeyProps {
   trackId: string;
   keyData: Key;
   pixelsPerSecond: number;
+  snapToGrid: boolean;
+  gridSize: number;
   onContextMenu: (e: React.MouseEvent, trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
 }
 
-export function TimelineKey({ trackId, keyData, pixelsPerSecond, onContextMenu }: TimelineKeyProps) {
+export function TimelineKey({
+  trackId,
+  keyData,
+  pixelsPerSecond,
+  snapToGrid,
+  gridSize,
+  onContextMenu,
+}: TimelineKeyProps) {
   const { selection, setSelection, startBatch, endBatch, updateKey } = useAnimator();
 
   const isSelected =
@@ -60,7 +69,13 @@ export function TimelineKey({ trackId, keyData, pixelsPerSecond, onContextMenu }
     const handleMouseMove = (e: MouseEvent) => {
       const deltaX = e.clientX - startX;
       const deltaTime = deltaX / pixelsPerSecond;
-      const newTime = Math.max(0, startTime + deltaTime);
+      let newTime = Math.max(0, startTime + deltaTime);
+
+      // Apply snapping if enabled
+      if (snapToGrid && gridSize > 0) {
+        newTime = Math.round(newTime / gridSize) * gridSize;
+      }
+
       updateKey(trackId, keyData.id, { time: newTime });
     };
 
@@ -86,7 +101,13 @@ export function TimelineKey({ trackId, keyData, pixelsPerSecond, onContextMenu }
     const handleMouseMove = (e: MouseEvent) => {
       const deltaX = e.clientX - startX;
       const deltaDuration = deltaX / pixelsPerSecond;
-      const newDuration = Math.max(0.05, startDuration + deltaDuration);
+      let newDuration = Math.max(0.05, startDuration + deltaDuration);
+
+      // Apply snapping if enabled
+      if (snapToGrid && gridSize > 0) {
+        newDuration = Math.max(gridSize, Math.round(newDuration / gridSize) * gridSize);
+      }
+
       updateKey(trackId, keyData.id, { duration: newDuration });
     };
 

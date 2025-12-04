@@ -6,6 +6,8 @@ interface TimelineTrackProps {
   track: Track;
   pixelsPerSecond: number;
   animationDuration: number;
+  snapToGrid: boolean;
+  gridSize: number;
   onTrackContextMenu: (e: React.MouseEvent, trackId: string, trackType: Track["type"]) => void;
   onKeyContextMenu: (e: React.MouseEvent, trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
 }
@@ -14,6 +16,8 @@ export function TimelineTrack({
   track,
   pixelsPerSecond,
   animationDuration,
+  snapToGrid,
+  gridSize,
   onTrackContextMenu,
   onKeyContextMenu,
 }: TimelineTrackProps) {
@@ -71,6 +75,8 @@ export function TimelineTrack({
             trackId={track.id}
             keyData={key}
             pixelsPerSecond={pixelsPerSecond}
+            snapToGrid={snapToGrid}
+            gridSize={gridSize}
             onContextMenu={onKeyContextMenu}
           />
         ))}

@@ -1,12 +1,38 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useAnimator } from "../../context/AnimatorContext";
 import type { SpriteTrack, SpriteKey } from "../../types";
 import { getSpriteKeyDuration } from "../../types";
 
 export function SpritePreview() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 160, height: 160 });
   const { getSpritesheetForKey, spritesheets, selectedAnimation, playback } =
     useAnimator();
+
+  // Resize canvas to fit container
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      const size = Math.min(rect.width - 16, rect.height - 16);
+      if (size > 0) {
+        setCanvasSize({ width: size, height: size });
+      }
+    };
+
+    // Initial size
+    updateSize();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateSize();
+    });
+
+    resizeObserver.observe(container);
+    return () => resizeObserver.disconnect();
+  }, []);
 
   // Find all sprite keys at current time (one per sprite track, in track order)
   const currentSpriteKeys = (() => {
@@ -86,11 +112,10 @@ export function SpritePreview() {
         const sx = col * tileWidth;
         const sy = row * tileHeight;
 
-        // Calculate destination (centered)
+        // Calculate destination (centered, scale to fit)
         const scale = Math.min(
           (canvas.width - 32) / tileWidth,
-          (canvas.height - 32) / tileHeight,
-          4
+          (canvas.height - 32) / tileHeight
         );
         const dw = tileWidth * scale;
         const dh = tileHeight * scale;
@@ -152,14 +177,14 @@ export function SpritePreview() {
         canvas.height / 2
       );
     }
-  }, [getSpritesheetForKey, spritesheets, currentSpriteKeys]);
+  }, [getSpritesheetForKey, spritesheets, currentSpriteKeys, canvasSize]);
 
   return (
-    <div className="flex-1 flex items-center justify-center p-2 min-h-0">
+    <div ref={containerRef} className="flex-1 flex items-center justify-center p-2 min-h-0">
       <canvas
         ref={canvasRef}
-        width={160}
-        height={160}
+        width={canvasSize.width}
+        height={canvasSize.height}
         className="border border-zinc-700 rounded flex-shrink-0"
       />
     </div>

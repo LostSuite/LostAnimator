@@ -1,3 +1,4 @@
+import { useState, useCallback, useRef } from "react";
 import { useAnimator } from "../../context/AnimatorContext";
 import { AnimationList } from "../animation-list/AnimationList";
 import { SpritePreview } from "../preview/SpritePreview";
@@ -7,6 +8,32 @@ import { PropertiesPanel } from "../properties/PropertiesPanel";
 
 export function AppLayout() {
   const { selectedAnimation, selectedSpritesheetId, selectSpritesheet } = useAnimator();
+  const [previewHeight, setPreviewHeight] = useState(192); // Default h-48 = 192px
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startHeight = previewHeight;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const deltaY = e.clientY - startY;
+      const newHeight = Math.max(100, Math.min(500, startHeight + deltaY));
+      setPreviewHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+
+    document.body.style.cursor = "ns-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+  }, [previewHeight]);
 
   return (
     <div className="flex flex-col h-screen bg-zinc-900 text-zinc-100 select-none">
@@ -18,11 +45,20 @@ export function AppLayout() {
         </div>
 
         {/* Center panel */}
-        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          {/* Preview area - full width */}
-          <div className="h-48 flex-shrink-0 border-b border-zinc-700/50 flex flex-col overflow-hidden">
+        <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden min-w-0">
+          {/* Preview area - resizable */}
+          <div
+            className="flex-shrink-0 flex flex-col overflow-hidden"
+            style={{ height: previewHeight }}
+          >
             <SpritePreview />
           </div>
+
+          {/* Resize handle */}
+          <div
+            className="h-1 flex-shrink-0 bg-zinc-700/50 hover:bg-blue-500/50 cursor-ns-resize transition-colors"
+            onMouseDown={handleResizeStart}
+          />
 
           {/* Timeline */}
           <div className="flex-1 overflow-hidden min-h-0">

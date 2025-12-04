@@ -81,6 +81,32 @@ const StopIcon = () => (
   </svg>
 );
 
+const NextFrameIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="7" height="7" />
+    <rect x="14" y="3" width="7" height="7" rx="1" fill="currentColor" stroke="none" />
+    <path d="M7 14v7M3 17h8" />
+  </svg>
+);
+
+const LoopIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 2l4 4-4 4" />
+    <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+    <path d="M7 22l-4-4 4-4" />
+    <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+  </svg>
+);
+
+const MagnetIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M5 3v2M19 3v2" />
+    <path d="M5 9v3a7 7 0 0 0 14 0V9" />
+    <rect x="3" y="5" width="4" height="4" fill="currentColor" />
+    <rect x="17" y="5" width="4" height="4" fill="currentColor" />
+  </svg>
+);
+
 export function Timeline() {
   const {
     selectedAnimation,
@@ -96,8 +122,11 @@ export function Timeline() {
     setCurrentTime,
     updateAnimation,
     spritesheets,
+    spritesheetImages,
     setSnapToGrid,
     setGridSize,
+    selection,
+    setSelection,
   } = useAnimator();
 
   const lastTimeRef = useRef<number>(0);
@@ -108,6 +137,39 @@ export function Timeline() {
   const [trackContextMenu, setTrackContextMenu] = useState<TrackContextMenu | null>(null);
   const [keyContextMenu, setKeyContextMenu] = useState<KeyContextMenu | null>(null);
   const [spritePicker, setSpritePicker] = useState<SpritePickerState | null>(null);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Space: toggle play/pause
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (playback.isPlaying) {
+          pause();
+        } else {
+          // If animation ended (at duration), restart from beginning
+          if (playback.currentTime >= (selectedAnimation?.duration ?? 1)) {
+            setCurrentTime(0);
+          }
+          play();
+        }
+      }
+
+      // Backspace/Delete: delete selected key
+      if ((e.code === "Backspace" || e.code === "Delete") && selection.type === "key") {
+        e.preventDefault();
+        removeKey(selection.trackId, selection.keyId);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [playback.isPlaying, playback.currentTime, selectedAnimation?.duration, selection, play, pause, setCurrentTime, removeKey]);
 
   // Use animation's duration with some padding for visibility
   const visibleDuration = (selectedAnimation?.duration ?? 1) + 1;
@@ -241,6 +303,55 @@ export function Timeline() {
     setKeyContextMenu(null);
   }, [keyContextMenu, removeKey]);
 
+  // Handle duplicating a key
+  const handleDuplicateKey = useCallback(() => {
+    if (!keyContextMenu || !selectedAnimation) return;
+    const { trackId, keyId } = keyContextMenu;
+
+    const track = selectedAnimation.tracks.find((t) => t.id === trackId);
+    const key = track?.keys.find((k) => k.id === keyId);
+    if (!key) return;
+
+    const newKeyId = crypto.randomUUID();
+    const newTime = key.time + timeline.gridSize;
+
+    // Create a copy of the key with new id and offset time
+    const newKey = { ...key, id: newKeyId, time: newTime };
+    addKey(trackId, newKey);
+
+    // Select the new key
+    setSelection({
+      type: "key",
+      animationId: selectedAnimation.id,
+      trackId,
+      keyId: newKeyId,
+    });
+
+    setKeyContextMenu(null);
+  }, [keyContextMenu, selectedAnimation, timeline.gridSize, addKey, setSelection]);
+
+  // Handle key double-click (edit)
+  const handleKeyDoubleClick = useCallback(
+    (trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => {
+      if (keyType === "sprite") {
+        // Find the key to get its current values
+        const track = selectedAnimation?.tracks.find((t) => t.id === trackId);
+        const key = track?.keys.find((k) => k.id === keyId);
+        if (!key || key.type !== "sprite") return;
+
+        setSpritePicker({
+          trackId,
+          keyId,
+          time: key.time,
+          initialSpritesheetId: key.spritesheetId ?? spritesheets[0]?.id,
+          initialFrame: key.frame,
+        });
+      }
+      // TODO: Add edit dialogs for tween and event keys
+    },
+    [selectedAnimation, spritesheets]
+  );
+
   // Handle sprite picker confirm
   const handleSpritePickerConfirm = useCallback(
     (spritesheetId: string, frame: [number, number]) => {
@@ -327,6 +438,92 @@ export function Timeline() {
     setCurrentTime(0);
   };
 
+  // Find the first sprite track (or selected sprite track)
+  const getSpriteTrackForAutoAdvance = () => {
+    if (!selectedAnimation) return null;
+
+    // If a key is selected and it's on a sprite track, use that track
+    if (selection.type === "key") {
+      const track = selectedAnimation.tracks.find((t) => t.id === selection.trackId);
+      if (track?.type === "sprite") return track;
+    }
+
+    // Otherwise, find the first sprite track
+    return selectedAnimation.tracks.find((t) => t.type === "sprite") ?? null;
+  };
+
+  const spriteTrack = getSpriteTrackForAutoAdvance();
+  const canAutoAdvance = spriteTrack !== null && spritesheets.length > 0;
+
+  const handleAutoAdvanceFrame = () => {
+    if (!spriteTrack || spritesheets.length === 0) return;
+
+    // Get the default spritesheet (first one)
+    const defaultSheet = spritesheets[0];
+    const image = spritesheetImages.get(defaultSheet.id);
+    if (!image) return;
+
+    // Calculate columns and rows
+    const columns = Math.floor(image.width / defaultSheet.tileWidth);
+    const rows = Math.floor(image.height / defaultSheet.tileHeight);
+
+    // Find the last sprite key to get its frame, or start at [-1, 0] to produce [0, 0]
+    const spriteKeys = spriteTrack.keys.filter((k) => k.type === "sprite");
+    const lastKey = spriteKeys.length > 0 ? spriteKeys[spriteKeys.length - 1] : null;
+
+    let nextFrame: [number, number];
+    let spritesheetId = defaultSheet.id;
+
+    if (lastKey && lastKey.type === "sprite") {
+      const [x, y] = lastKey.frame;
+      spritesheetId = lastKey.spritesheetId ?? defaultSheet.id;
+
+      // Get the spritesheet for this key to calculate its dimensions
+      const keySheet = spritesheets.find((s) => s.id === spritesheetId) ?? defaultSheet;
+      const keyImage = spritesheetImages.get(keySheet.id);
+      const keyCols = keyImage ? Math.floor(keyImage.width / keySheet.tileWidth) : columns;
+      const keyRows = keyImage ? Math.floor(keyImage.height / keySheet.tileHeight) : rows;
+
+      // Calculate next frame with wrap
+      if (x + 1 < keyCols) {
+        nextFrame = [x + 1, y];
+      } else if (y + 1 < keyRows) {
+        nextFrame = [0, y + 1];
+      } else {
+        // Wrap to beginning
+        nextFrame = [0, 0];
+      }
+    } else {
+      // First frame
+      nextFrame = [0, 0];
+    }
+
+    // Calculate new time based on last key's time, not playhead
+    const baseTime = lastKey ? lastKey.time : playback.currentTime;
+    const newTime = baseTime + timeline.gridSize;
+
+    // Create the new key
+    const keyId = crypto.randomUUID();
+    addKey(spriteTrack.id, {
+      type: "sprite",
+      id: keyId,
+      time: newTime,
+      spritesheetId,
+      frame: nextFrame,
+    });
+
+    // Select the new key
+    setSelection({
+      type: "key",
+      animationId: selectedAnimation?.id ?? "",
+      trackId: spriteTrack.id,
+      keyId,
+    });
+
+    // Advance playhead
+    setCurrentTime(newTime);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Timeline header with controls */}
@@ -370,31 +567,64 @@ export function Timeline() {
           layout="horizontal"
         />
 
+        <button
+          onClick={() => updateAnimation(animationId, { loop: !selectedAnimation.loop })}
+          className={`p-1.5 rounded ${
+            selectedAnimation.loop
+              ? "bg-blue-500/20 text-blue-400"
+              : "hover:bg-zinc-700 text-zinc-500"
+          }`}
+          title={selectedAnimation.loop ? "Loop enabled" : "Loop disabled"}
+        >
+          <LoopIcon />
+        </button>
+
         <div className="w-px h-5 bg-zinc-600 mx-1" />
 
         {/* Snap controls */}
-        <label className="flex items-center gap-1.5 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={timeline.snapToGrid}
-            onChange={(e) => setSnapToGrid(e.target.checked)}
-            className="w-3 h-3 rounded border-zinc-600 bg-zinc-700 text-blue-500 focus:ring-0 focus:ring-offset-0"
-          />
-          <span className="text-xs text-zinc-400">Snap</span>
-        </label>
-        <div className={timeline.snapToGrid ? "" : "opacity-40 pointer-events-none"}>
-          <DragNumberInput
-            value={timeline.gridSize}
-            onChange={setGridSize}
-            onInput={setGridSize}
-            min={0.01}
-            max={1}
-            dragSpeed={0.005}
-            precision={2}
-            label="Step"
-            layout="horizontal"
-          />
+        <div className="flex items-center gap-0.5 bg-zinc-800/50 rounded border border-zinc-700/50 p-0.5">
+          <button
+            onClick={() => setSnapToGrid(!timeline.snapToGrid)}
+            className={`p-1.5 rounded flex items-center gap-1 text-xs transition-colors ${
+              timeline.snapToGrid
+                ? "bg-blue-500/20 text-blue-400"
+                : "text-zinc-500 hover:text-zinc-300"
+            }`}
+            title={timeline.snapToGrid ? "Snap enabled" : "Snap disabled"}
+          >
+            <MagnetIcon />
+          </button>
+          <div className={`transition-opacity ${timeline.snapToGrid ? "" : "opacity-40 pointer-events-none"}`}>
+            <DragNumberInput
+              value={timeline.gridSize}
+              onChange={setGridSize}
+              onInput={setGridSize}
+              min={0.01}
+              max={1}
+              dragSpeed={0.005}
+              precision={2}
+              label=""
+              layout="horizontal"
+            />
+          </div>
         </div>
+
+        <div className="w-px h-5 bg-zinc-600 mx-1" />
+
+        {/* Auto-advance frame button */}
+        <button
+          onClick={handleAutoAdvanceFrame}
+          disabled={!canAutoAdvance}
+          className={`p-1.5 rounded flex items-center gap-1 text-xs ${
+            canAutoAdvance
+              ? "hover:bg-zinc-700 text-zinc-400 hover:text-zinc-100"
+              : "text-zinc-600 cursor-not-allowed"
+          }`}
+          title={canAutoAdvance ? "Add next frame (auto-advance)" : "Add a sprite track and spritesheet first"}
+        >
+          <NextFrameIcon />
+          <span>Next</span>
+        </button>
 
         <div className="relative">
           <select
@@ -441,6 +671,7 @@ export function Timeline() {
                 gridSize={timeline.gridSize}
                 onTrackContextMenu={handleTrackContextMenu}
                 onKeyContextMenu={handleKeyContextMenu}
+                onKeyDoubleClick={handleKeyDoubleClick}
               />
             ))
           )}
@@ -490,6 +721,12 @@ export function Timeline() {
                 Edit Sprite...
               </button>
             )}
+            <button
+              onClick={handleDuplicateKey}
+              className="w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-700 text-zinc-200"
+            >
+              Duplicate
+            </button>
             <button
               onClick={handleDeleteKey}
               className="w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-700 text-red-400"

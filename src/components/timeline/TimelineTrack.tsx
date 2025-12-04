@@ -10,6 +10,7 @@ interface TimelineTrackProps {
   gridSize: number;
   onTrackContextMenu: (e: React.MouseEvent, trackId: string, trackType: Track["type"]) => void;
   onKeyContextMenu: (e: React.MouseEvent, trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
+  onKeyDoubleClick: (trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
 }
 
 export function TimelineTrack({
@@ -20,6 +21,7 @@ export function TimelineTrack({
   gridSize,
   onTrackContextMenu,
   onKeyContextMenu,
+  onKeyDoubleClick,
 }: TimelineTrackProps) {
   const { removeTrack } = useAnimator();
   const animationWidth = animationDuration * pixelsPerSecond;
@@ -78,6 +80,7 @@ export function TimelineTrack({
             snapToGrid={snapToGrid}
             gridSize={gridSize}
             onContextMenu={onKeyContextMenu}
+            onDoubleClick={onKeyDoubleClick}
           />
         ))}
       </div>

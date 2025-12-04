@@ -9,6 +9,7 @@ interface TimelineKeyProps {
   snapToGrid: boolean;
   gridSize: number;
   onContextMenu: (e: React.MouseEvent, trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
+  onDoubleClick: (trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
 }
 
 export function TimelineKey({
@@ -18,6 +19,7 @@ export function TimelineKey({
   snapToGrid,
   gridSize,
   onContextMenu,
+  onDoubleClick,
 }: TimelineKeyProps) {
   const { selection, setSelection, startBatch, endBatch, updateKey } = useAnimator();
 
@@ -57,6 +59,11 @@ export function TimelineKey({
 
   const handleContextMenu = (e: React.MouseEvent) => {
     onContextMenu(e, trackId, keyData.id, keyData.type);
+  };
+
+  const handleDoubleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDoubleClick(trackId, keyData.id, keyData.type);
   };
 
   const handleDragStart = (e: React.MouseEvent) => {
@@ -137,6 +144,7 @@ export function TimelineKey({
         width: Math.max(width, 4),
       }}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onMouseDown={handleDragStart}
       onContextMenu={handleContextMenu}
     >

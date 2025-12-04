@@ -6,10 +6,18 @@ interface TimelineTrackProps {
   track: Track;
   pixelsPerSecond: number;
   animationDuration: number;
+  onTrackContextMenu: (e: React.MouseEvent, trackId: string, trackType: Track["type"]) => void;
+  onKeyContextMenu: (e: React.MouseEvent, trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
 }
 
-export function TimelineTrack({ track, pixelsPerSecond, animationDuration }: TimelineTrackProps) {
-  const { removeTrack, addKey } = useAnimator();
+export function TimelineTrack({
+  track,
+  pixelsPerSecond,
+  animationDuration,
+  onTrackContextMenu,
+  onKeyContextMenu,
+}: TimelineTrackProps) {
+  const { removeTrack } = useAnimator();
   const animationWidth = animationDuration * pixelsPerSecond;
 
   const trackTypeLabel = {
@@ -24,39 +32,8 @@ export function TimelineTrack({ track, pixelsPerSecond, animationDuration }: Tim
     event: "bg-amber-500/20 border-amber-500/50",
   }[track.type];
 
-  const handleDoubleClick = (e: React.MouseEvent) => {
-    // Calculate click position in time
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const time = Math.max(0, x / pixelsPerSecond);
-
-    // Create appropriate key type
-    const keyId = crypto.randomUUID();
-
-    if (track.type === "sprite") {
-      addKey(track.id, {
-        type: "sprite",
-        id: keyId,
-        time,
-        frame: [0, 0],
-      });
-    } else if (track.type === "tween") {
-      addKey(track.id, {
-        type: "tween",
-        id: keyId,
-        time,
-        duration: 0.5,
-        name: "tween",
-        easing: "Linear",
-      });
-    } else if (track.type === "event") {
-      addKey(track.id, {
-        type: "event",
-        id: keyId,
-        time,
-        name: "event",
-      });
-    }
+  const handleContextMenu = (e: React.MouseEvent) => {
+    onTrackContextMenu(e, track.id, track.type);
   };
 
   return (
@@ -76,7 +53,7 @@ export function TimelineTrack({ track, pixelsPerSecond, animationDuration }: Tim
       {/* Track content */}
       <div
         className={`flex-1 relative ${trackColor} border-l-2`}
-        onDoubleClick={handleDoubleClick}
+        onContextMenu={handleContextMenu}
       >
         {/* Past animation area overlay (darker) */}
         <div
@@ -94,6 +71,7 @@ export function TimelineTrack({ track, pixelsPerSecond, animationDuration }: Tim
             trackId={track.id}
             keyData={key}
             pixelsPerSecond={pixelsPerSecond}
+            onContextMenu={onKeyContextMenu}
           />
         ))}
       </div>

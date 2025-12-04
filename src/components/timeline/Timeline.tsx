@@ -1,10 +1,37 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAnimator } from "../../context/AnimatorContext";
 import { TimelineHeader } from "./TimelineHeader";
 import { TimelineTrack } from "./TimelineTrack";
 import { Playhead } from "./Playhead";
 import { DragNumberInput } from "../ui/DragNumberInput";
+import { SpritePickerModal } from "./SpritePickerModal";
 import { formatTime } from "../../utils/timelineUtils";
+import type { Track } from "../../types";
+
+// Context menu state types
+interface TrackContextMenu {
+  x: number;
+  y: number;
+  trackId: string;
+  trackType: Track["type"];
+  time: number;
+}
+
+interface KeyContextMenu {
+  x: number;
+  y: number;
+  trackId: string;
+  keyId: string;
+  keyType: "sprite" | "tween" | "event";
+}
+
+interface SpritePickerState {
+  trackId: string;
+  keyId?: string;
+  time: number;
+  initialSpritesheetId?: string;
+  initialFrame?: [number, number];
+}
 
 // SVG Icons
 const PlusIcon = () => (
@@ -59,17 +86,26 @@ export function Timeline() {
     selectedAnimation,
     timeline,
     addTrack,
+    addKey,
+    removeKey,
+    updateKey,
     playback,
     play,
     pause,
     stop,
     setCurrentTime,
     updateAnimation,
+    spritesheets,
   } = useAnimator();
 
   const lastTimeRef = useRef<number>(0);
   const rafRef = useRef<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+
+  // Context menu and modal state
+  const [trackContextMenu, setTrackContextMenu] = useState<TrackContextMenu | null>(null);
+  const [keyContextMenu, setKeyContextMenu] = useState<KeyContextMenu | null>(null);
+  const [spritePicker, setSpritePicker] = useState<SpritePickerState | null>(null);
 
   // Use animation's duration with some padding for visibility
   const visibleDuration = (selectedAnimation?.duration ?? 1) + 1;
@@ -115,6 +151,125 @@ export function Timeline() {
     document.addEventListener("mousemove", handleMouseMove);
     document.addEventListener("mouseup", handleMouseUp);
   }, [getTimeFromMouseEvent, setCurrentTime]);
+
+  // Close context menus on click outside
+  const closeContextMenus = useCallback(() => {
+    setTrackContextMenu(null);
+    setKeyContextMenu(null);
+  }, []);
+
+  // Handle track context menu
+  const handleTrackContextMenu = useCallback(
+    (e: React.MouseEvent, trackId: string, trackType: Track["type"]) => {
+      e.preventDefault();
+      closeContextMenus();
+      const time = getTimeFromMouseEvent(e);
+      setTrackContextMenu({ x: e.clientX, y: e.clientY, trackId, trackType, time });
+    },
+    [getTimeFromMouseEvent, closeContextMenus]
+  );
+
+  // Handle key context menu
+  const handleKeyContextMenu = useCallback(
+    (e: React.MouseEvent, trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeContextMenus();
+      setKeyContextMenu({ x: e.clientX, y: e.clientY, trackId, keyId, keyType });
+    },
+    [closeContextMenus]
+  );
+
+  // Handle adding a key from context menu
+  const handleAddKey = useCallback(() => {
+    if (!trackContextMenu) return;
+    const { trackId, trackType, time } = trackContextMenu;
+    const keyId = crypto.randomUUID();
+
+    if (trackType === "sprite") {
+      // Open sprite picker for sprite keys
+      setSpritePicker({
+        trackId,
+        time,
+      });
+    } else if (trackType === "tween") {
+      addKey(trackId, {
+        type: "tween",
+        id: keyId,
+        time,
+        duration: 0.5,
+        name: "tween",
+        easing: "Linear",
+      });
+    } else if (trackType === "event") {
+      addKey(trackId, {
+        type: "event",
+        id: keyId,
+        time,
+        name: "event",
+      });
+    }
+    setTrackContextMenu(null);
+  }, [trackContextMenu, addKey]);
+
+  // Handle editing a sprite key
+  const handleEditSpriteKey = useCallback(() => {
+    if (!keyContextMenu || keyContextMenu.keyType !== "sprite") return;
+    const { trackId, keyId } = keyContextMenu;
+
+    // Find the key to get its current values
+    const track = selectedAnimation?.tracks.find((t) => t.id === trackId);
+    const key = track?.keys.find((k) => k.id === keyId);
+    if (!key || key.type !== "sprite") return;
+
+    setSpritePicker({
+      trackId,
+      keyId,
+      time: key.time,
+      initialSpritesheetId: key.spritesheetId ?? spritesheets[0]?.id,
+      initialFrame: key.frame,
+    });
+    setKeyContextMenu(null);
+  }, [keyContextMenu, selectedAnimation, spritesheets]);
+
+  // Handle deleting a key
+  const handleDeleteKey = useCallback(() => {
+    if (!keyContextMenu) return;
+    removeKey(keyContextMenu.trackId, keyContextMenu.keyId);
+    setKeyContextMenu(null);
+  }, [keyContextMenu, removeKey]);
+
+  // Handle sprite picker confirm
+  const handleSpritePickerConfirm = useCallback(
+    (spritesheetId: string, frame: [number, number]) => {
+      if (!spritePicker) return;
+
+      if (spritePicker.keyId) {
+        // Editing existing key
+        updateKey(spritePicker.trackId, spritePicker.keyId, {
+          spritesheetId,
+          frame,
+        });
+      } else {
+        // Creating new key
+        const keyId = crypto.randomUUID();
+        addKey(spritePicker.trackId, {
+          type: "sprite",
+          id: keyId,
+          time: spritePicker.time,
+          spritesheetId,
+          frame,
+        });
+      }
+      setSpritePicker(null);
+    },
+    [spritePicker, addKey, updateKey]
+  );
+
+  // Handle sprite picker cancel
+  const handleSpritePickerCancel = useCallback(() => {
+    setSpritePicker(null);
+  }, []);
 
   // Playback animation loop
   useEffect(() => {
@@ -253,6 +408,8 @@ export function Timeline() {
                 track={track}
                 pixelsPerSecond={timeline.zoom}
                 animationDuration={totalDuration}
+                onTrackContextMenu={handleTrackContextMenu}
+                onKeyContextMenu={handleKeyContextMenu}
               />
             ))
           )}
@@ -267,6 +424,60 @@ export function Timeline() {
           }
         />
       </div>
+
+      {/* Track context menu */}
+      {trackContextMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={closeContextMenus} />
+          <div
+            className="fixed z-50 bg-zinc-800 border border-zinc-600 rounded shadow-lg py-1 min-w-36"
+            style={{ left: trackContextMenu.x, top: trackContextMenu.y }}
+          >
+            <button
+              onClick={handleAddKey}
+              className="w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-700 text-zinc-200"
+            >
+              Add {trackContextMenu.trackType.charAt(0).toUpperCase() + trackContextMenu.trackType.slice(1)} Key
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Key context menu */}
+      {keyContextMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={closeContextMenus} />
+          <div
+            className="fixed z-50 bg-zinc-800 border border-zinc-600 rounded shadow-lg py-1 min-w-36"
+            style={{ left: keyContextMenu.x, top: keyContextMenu.y }}
+          >
+            {keyContextMenu.keyType === "sprite" && (
+              <button
+                onClick={handleEditSpriteKey}
+                className="w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-700 text-zinc-200"
+              >
+                Edit Sprite...
+              </button>
+            )}
+            <button
+              onClick={handleDeleteKey}
+              className="w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-700 text-red-400"
+            >
+              Delete
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Sprite picker modal */}
+      {spritePicker && (
+        <SpritePickerModal
+          initialSpritesheetId={spritePicker.initialSpritesheetId}
+          initialFrame={spritePicker.initialFrame}
+          onConfirm={handleSpritePickerConfirm}
+          onCancel={handleSpritePickerCancel}
+        />
+      )}
     </div>
   );
 }

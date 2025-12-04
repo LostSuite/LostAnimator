@@ -6,9 +6,10 @@ interface TimelineKeyProps {
   trackId: string;
   keyData: Key;
   pixelsPerSecond: number;
+  onContextMenu: (e: React.MouseEvent, trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
 }
 
-export function TimelineKey({ trackId, keyData, pixelsPerSecond }: TimelineKeyProps) {
+export function TimelineKey({ trackId, keyData, pixelsPerSecond, onContextMenu }: TimelineKeyProps) {
   const { selection, setSelection, startBatch, endBatch, updateKey } = useAnimator();
 
   const isSelected =
@@ -43,6 +44,10 @@ export function TimelineKey({ trackId, keyData, pixelsPerSecond }: TimelineKeyPr
       trackId,
       keyId: keyData.id,
     });
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    onContextMenu(e, trackId, keyData.id, keyData.type);
   };
 
   const handleDragStart = (e: React.MouseEvent) => {
@@ -112,6 +117,7 @@ export function TimelineKey({ trackId, keyData, pixelsPerSecond }: TimelineKeyPr
       }}
       onClick={handleClick}
       onMouseDown={handleDragStart}
+      onContextMenu={handleContextMenu}
     >
       {/* Resize handle for tween keys only */}
       {canResize && (

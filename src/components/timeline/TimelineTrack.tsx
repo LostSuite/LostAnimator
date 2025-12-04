@@ -1,4 +1,6 @@
-import { useAnimator } from "../../context/AnimatorContext";
+import { useState, useRef, useEffect } from "react";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { TimelineKey } from "./TimelineKey";
 import type { Track } from "../../types";
 
@@ -8,7 +10,11 @@ interface TimelineTrackProps {
   animationDuration: number;
   snapToGrid: boolean;
   gridSize: number;
+  isRenaming: boolean;
+  onRenameSubmit: (trackId: string, newName: string) => void;
+  onRenameCancel: () => void;
   onTrackContextMenu: (e: React.MouseEvent, trackId: string, trackType: Track["type"]) => void;
+  onTrackLabelContextMenu: (e: React.MouseEvent, trackId: string) => void;
   onKeyContextMenu: (e: React.MouseEvent, trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
   onKeyDoubleClick: (trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
 }
@@ -19,11 +25,55 @@ export function TimelineTrack({
   animationDuration,
   snapToGrid,
   gridSize,
+  isRenaming,
+  onRenameSubmit,
+  onRenameCancel,
   onTrackContextMenu,
+  onTrackLabelContextMenu,
   onKeyContextMenu,
   onKeyDoubleClick,
 }: TimelineTrackProps) {
-  const { removeTrack } = useAnimator();
+  const [renameValue, setRenameValue] = useState(track.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: track.id, disabled: isRenaming });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  // Focus and select text when rename mode starts
+  useEffect(() => {
+    if (isRenaming && inputRef.current) {
+      setRenameValue(track.name);
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isRenaming, track.name]);
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      onRenameSubmit(track.id, renameValue);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      onRenameCancel();
+    }
+  };
+
+  const handleRenameBlur = () => {
+    onRenameSubmit(track.id, renameValue);
+  };
   const animationWidth = animationDuration * pixelsPerSecond;
 
   const trackTypeLabel = {
@@ -42,18 +92,37 @@ export function TimelineTrack({
     onTrackContextMenu(e, track.id, track.type);
   };
 
+  const handleLabelContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    onTrackLabelContextMenu(e, track.id);
+  };
+
   return (
-    <div className="flex h-10 border-b border-zinc-700">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex h-10 border-b border-zinc-700"
+    >
       {/* Track label */}
-      <div className="w-[100px] flex-shrink-0 bg-zinc-800 flex items-center px-2 gap-1 border-r border-zinc-700">
-        <span className="text-xs flex-1 truncate">{trackTypeLabel}</span>
-        <button
-          onClick={() => removeTrack(track.id)}
-          className="text-xs text-zinc-500 hover:text-red-400"
-          title="Delete track"
-        >
-          ×
-        </button>
+      <div
+        className="w-[140px] flex-shrink-0 bg-zinc-800 flex items-center px-2 border-r border-zinc-700 cursor-grab active:cursor-grabbing"
+        onContextMenu={handleLabelContextMenu}
+        {...attributes}
+        {...listeners}
+      >
+        {isRenaming ? (
+          <input
+            ref={inputRef}
+            type="text"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={handleRenameKeyDown}
+            onBlur={handleRenameBlur}
+            className="w-full text-xs bg-zinc-700 border border-zinc-500 rounded px-1 py-0.5 outline-none focus:border-blue-500"
+          />
+        ) : (
+          <span className="text-xs truncate">{track.name || trackTypeLabel}</span>
+        )}
       </div>
 
       {/* Track content */}

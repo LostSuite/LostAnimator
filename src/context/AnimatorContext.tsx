@@ -58,6 +58,7 @@ interface AnimatorContextType {
   addSpritesheet: () => Promise<void>;
   removeSpritesheet: (id: string) => void;
   updateSpritesheet: (id: string, updates: Partial<Spritesheet>) => void;
+  reorderSpritesheets: (fromIndex: number, toIndex: number) => void;
   selectSpritesheet: (id: string | null) => void;
   getSpritesheetForKey: (key: SpriteKey) => { config: Spritesheet; image: HTMLImageElement } | null;
 
@@ -75,6 +76,8 @@ interface AnimatorContextType {
   // Tracks
   addTrack: (type: TrackType) => void;
   removeTrack: (trackId: string) => void;
+  renameTrack: (trackId: string, name: string) => void;
+  reorderTracks: (fromIndex: number, toIndex: number) => void;
 
   // Keys
   addKey: (trackId: string, key: Key) => void;
@@ -268,6 +271,20 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
     [updateFile]
   );
 
+  const reorderSpritesheets = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (fromIndex === toIndex) return;
+
+      updateFile((file) => {
+        const newSpritesheets = [...file.spritesheets];
+        const [removed] = newSpritesheets.splice(fromIndex, 1);
+        newSpritesheets.splice(toIndex, 0, removed);
+        return { ...file, spritesheets: newSpritesheets };
+      });
+    },
+    [updateFile]
+  );
+
   const selectSpritesheet = useCallback((id: string | null) => {
     setSelectedSpritesheetId(id);
   }, []);
@@ -344,18 +361,21 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
             return {
               type: "sprite",
               id: newTrackId,
+              name: track.name,
               keys: track.keys.map((k) => ({ ...k, id: generateId() })),
             };
           case "tween":
             return {
               type: "tween",
               id: newTrackId,
+              name: track.name,
               keys: track.keys.map((k) => ({ ...k, id: generateId() })),
             };
           case "event":
             return {
               type: "event",
               id: newTrackId,
+              name: track.name,
               keys: track.keys.map((k) => ({ ...k, id: generateId() })),
             };
         }
@@ -396,12 +416,13 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
       if (!selectedAnimationId) return;
 
       const trackId = generateId();
+      const trackName = type === "sprite" ? "Sprite" : type === "tween" ? "Tween" : "Event";
       const track =
         type === "sprite"
-          ? createSpriteTrack(trackId)
+          ? createSpriteTrack(trackId, trackName)
           : type === "tween"
-            ? createTweenTrack(trackId)
-            : createEventTrack(trackId);
+            ? createTweenTrack(trackId, trackName)
+            : createEventTrack(trackId, trackName);
 
       updateFile((file) => ({
         ...file,
@@ -426,6 +447,45 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
             ? { ...a, tracks: a.tracks.filter((t) => t.id !== trackId) }
             : a
         ),
+      }));
+    },
+    [selectedAnimationId, updateFile]
+  );
+
+  const renameTrack = useCallback(
+    (trackId: string, name: string) => {
+      if (!selectedAnimationId) return;
+
+      updateFile((file) => ({
+        ...file,
+        animations: file.animations.map((a) =>
+          a.id === selectedAnimationId
+            ? {
+                ...a,
+                tracks: a.tracks.map((t) =>
+                  t.id === trackId ? { ...t, name } : t
+                ),
+              }
+            : a
+        ),
+      }));
+    },
+    [selectedAnimationId, updateFile]
+  );
+
+  const reorderTracks = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (fromIndex === toIndex || !selectedAnimationId) return;
+
+      updateFile((file) => ({
+        ...file,
+        animations: file.animations.map((a) => {
+          if (a.id !== selectedAnimationId) return a;
+          const newTracks = [...a.tracks];
+          const [removed] = newTracks.splice(fromIndex, 1);
+          newTracks.splice(toIndex, 0, removed);
+          return { ...a, tracks: newTracks };
+        }),
       }));
     },
     [selectedAnimationId, updateFile]
@@ -610,6 +670,7 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
     addSpritesheet,
     removeSpritesheet,
     updateSpritesheet,
+    reorderSpritesheets,
     selectSpritesheet,
     getSpritesheetForKey,
 
@@ -627,6 +688,8 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
     // Tracks
     addTrack,
     removeTrack,
+    renameTrack,
+    reorderTracks,
 
     // Keys
     addKey,

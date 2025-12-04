@@ -1,4 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { useAnimator } from "../../context/AnimatorContext";
 import { TimelineHeader } from "./TimelineHeader";
 import { TimelineTrack } from "./TimelineTrack";
@@ -23,6 +37,12 @@ interface KeyContextMenu {
   trackId: string;
   keyId: string;
   keyType: "sprite" | "tween" | "event";
+}
+
+interface TrackLabelContextMenu {
+  x: number;
+  y: number;
+  trackId: string;
 }
 
 interface SpritePickerState {
@@ -127,6 +147,9 @@ export function Timeline() {
     setGridSize,
     selection,
     setSelection,
+    removeTrack,
+    renameTrack,
+    reorderTracks,
   } = useAnimator();
 
   const lastTimeRef = useRef<number>(0);
@@ -136,7 +159,32 @@ export function Timeline() {
   // Context menu and modal state
   const [trackContextMenu, setTrackContextMenu] = useState<TrackContextMenu | null>(null);
   const [keyContextMenu, setKeyContextMenu] = useState<KeyContextMenu | null>(null);
+  const [trackLabelContextMenu, setTrackLabelContextMenu] = useState<TrackLabelContextMenu | null>(null);
   const [spritePicker, setSpritePicker] = useState<SpritePickerState | null>(null);
+  const [renamingTrackId, setRenamingTrackId] = useState<string | null>(null);
+
+  // DnD sensors for track reordering
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleTrackDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || !selectedAnimation) return;
+
+    if (active.id !== over.id) {
+      const oldIndex = selectedAnimation.tracks.findIndex((t) => t.id === active.id);
+      const newIndex = selectedAnimation.tracks.findIndex((t) => t.id === over.id);
+      reorderTracks(oldIndex, newIndex);
+    }
+  }, [selectedAnimation, reorderTracks]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -190,7 +238,7 @@ export function Timeline() {
   const getTimeFromMouseEvent = useCallback((e: MouseEvent | React.MouseEvent) => {
     const rect = timelineRef.current?.getBoundingClientRect();
     if (!rect) return 0;
-    const x = e.clientX - rect.left - 100; // 100px for track labels
+    const x = e.clientX - rect.left - 140; // 140px for track labels
     return Math.max(0, Math.min(totalDuration, x / timeline.zoom));
   }, [timeline.zoom, totalDuration]);
 
@@ -220,6 +268,7 @@ export function Timeline() {
   const closeContextMenus = useCallback(() => {
     setTrackContextMenu(null);
     setKeyContextMenu(null);
+    setTrackLabelContextMenu(null);
   }, []);
 
   // Handle track context menu
@@ -243,6 +292,43 @@ export function Timeline() {
     },
     [closeContextMenus]
   );
+
+  // Handle track label context menu (for rename/delete)
+  const handleTrackLabelContextMenu = useCallback(
+    (e: React.MouseEvent, trackId: string) => {
+      e.preventDefault();
+      closeContextMenus();
+      setTrackLabelContextMenu({ x: e.clientX, y: e.clientY, trackId });
+    },
+    [closeContextMenus]
+  );
+
+  // Handle delete track from label context menu
+  const handleDeleteTrack = useCallback(() => {
+    if (!trackLabelContextMenu) return;
+    removeTrack(trackLabelContextMenu.trackId);
+    setTrackLabelContextMenu(null);
+  }, [trackLabelContextMenu, removeTrack]);
+
+  // Handle start rename from label context menu
+  const handleStartRename = useCallback(() => {
+    if (!trackLabelContextMenu) return;
+    setRenamingTrackId(trackLabelContextMenu.trackId);
+    setTrackLabelContextMenu(null);
+  }, [trackLabelContextMenu]);
+
+  // Handle rename submission
+  const handleRenameSubmit = useCallback((trackId: string, newName: string) => {
+    if (newName.trim()) {
+      renameTrack(trackId, newName.trim());
+    }
+    setRenamingTrackId(null);
+  }, [renameTrack]);
+
+  // Handle rename cancel
+  const handleRenameCancel = useCallback(() => {
+    setRenamingTrackId(null);
+  }, []);
 
   // Handle adding a key from context menu
   const handleAddKey = useCallback(() => {
@@ -661,19 +747,34 @@ export function Timeline() {
               No tracks yet. Add a track using the dropdown above.
             </div>
           ) : (
-            selectedAnimation.tracks.map((track) => (
-              <TimelineTrack
-                key={track.id}
-                track={track}
-                pixelsPerSecond={timeline.zoom}
-                animationDuration={totalDuration}
-                snapToGrid={timeline.snapToGrid}
-                gridSize={timeline.gridSize}
-                onTrackContextMenu={handleTrackContextMenu}
-                onKeyContextMenu={handleKeyContextMenu}
-                onKeyDoubleClick={handleKeyDoubleClick}
-              />
-            ))
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleTrackDragEnd}
+            >
+              <SortableContext
+                items={selectedAnimation.tracks.map((t) => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {selectedAnimation.tracks.map((track) => (
+                  <TimelineTrack
+                    key={track.id}
+                    track={track}
+                    pixelsPerSecond={timeline.zoom}
+                    animationDuration={totalDuration}
+                    snapToGrid={timeline.snapToGrid}
+                    gridSize={timeline.gridSize}
+                    isRenaming={renamingTrackId === track.id}
+                    onRenameSubmit={handleRenameSubmit}
+                    onRenameCancel={handleRenameCancel}
+                    onTrackContextMenu={handleTrackContextMenu}
+                    onTrackLabelContextMenu={handleTrackLabelContextMenu}
+                    onKeyContextMenu={handleKeyContextMenu}
+                    onKeyDoubleClick={handleKeyDoubleClick}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           )}
         </div>
 
@@ -732,6 +833,30 @@ export function Timeline() {
               className="w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-700 text-red-400"
             >
               Delete
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Track label context menu */}
+      {trackLabelContextMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={closeContextMenus} />
+          <div
+            className="fixed z-50 bg-zinc-800 border border-zinc-600 rounded shadow-lg py-1 min-w-36"
+            style={{ left: trackLabelContextMenu.x, top: trackLabelContextMenu.y }}
+          >
+            <button
+              onClick={handleStartRename}
+              className="w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-700 text-zinc-200"
+            >
+              Rename
+            </button>
+            <button
+              onClick={handleDeleteTrack}
+              className="w-full px-3 py-1.5 text-left text-xs hover:bg-zinc-700 text-red-400"
+            >
+              Delete Track
             </button>
           </div>
         </>

@@ -4,16 +4,12 @@ import { SpritePreview } from "../preview/SpritePreview";
 import { SpritesheetList, SpritesheetModal } from "../spritesheet";
 import { Timeline } from "../timeline/Timeline";
 import { PropertiesPanel } from "../properties/PropertiesPanel";
-import { Toolbar } from "./Toolbar";
 
 export function AppLayout() {
   const { selectedAnimation, selectedSpritesheetId, selectSpritesheet } = useAnimator();
 
   return (
     <div className="flex flex-col h-screen bg-zinc-900 text-zinc-100 select-none">
-      {/* Title bar with filename */}
-      <Toolbar />
-
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Left panel - Animations only */}

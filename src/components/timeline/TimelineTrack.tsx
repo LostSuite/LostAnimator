@@ -144,6 +144,7 @@ export function TimelineTrack({
           <TimelineKey
             key={key.id}
             trackId={track.id}
+            trackType={track.type}
             keyData={key}
             pixelsPerSecond={pixelsPerSecond}
             snapToGrid={snapToGrid}

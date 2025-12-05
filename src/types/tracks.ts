@@ -11,19 +11,18 @@ export const EasingTypeSchema = z.enum([
 ]);
 export type EasingType = z.infer<typeof EasingTypeSchema>;
 
-// Key schemas
+// Key schemas (type is determined by parent track, not stored redundantly)
 export const SpriteKeySchema = z.object({
-  type: z.literal("sprite"),
   id: z.string(),
   time: z.number(),
   frame: z.tuple([z.number(), z.number()]),
+  offset: z.tuple([z.number(), z.number()]).default([0, 0]),
   spritesheetId: z.string().optional(),
   flip: z.enum(["horizontal", "vertical", "both"]).optional(),
 });
 export type SpriteKey = z.infer<typeof SpriteKeySchema>;
 
 export const TweenKeySchema = z.object({
-  type: z.literal("tween"),
   id: z.string(),
   time: z.number(),
   duration: z.number(),
@@ -33,19 +32,14 @@ export const TweenKeySchema = z.object({
 export type TweenKey = z.infer<typeof TweenKeySchema>;
 
 export const EventKeySchema = z.object({
-  type: z.literal("event"),
   id: z.string(),
   time: z.number(),
   name: z.string(),
 });
 export type EventKey = z.infer<typeof EventKeySchema>;
 
-export const KeySchema = z.discriminatedUnion("type", [
-  SpriteKeySchema,
-  TweenKeySchema,
-  EventKeySchema,
-]);
-export type Key = z.infer<typeof KeySchema>;
+// Union type for when you have a key but don't know which track it came from
+export type Key = SpriteKey | TweenKey | EventKey;
 
 // Track schemas
 export const SpriteTrackSchema = z.object({
@@ -100,7 +94,7 @@ export function createSpriteKey(
   time: number,
   frame: [number, number]
 ): SpriteKey {
-  return { type: "sprite", id, time, frame };
+  return { id, time, frame, offset: [0, 0] };
 }
 
 export function createTweenKey(
@@ -110,19 +104,20 @@ export function createTweenKey(
   name: string,
   easing: EasingType = "Linear"
 ): TweenKey {
-  return { type: "tween", id, time, duration, name, easing };
+  return { id, time, duration, name, easing };
 }
 
 export function createEventKey(id: string, time: number, name: string): EventKey {
-  return { type: "event", id, time, name };
+  return { id, time, name };
 }
 
 // Utility functions
 export function getKeyEndTime(key: Key): number {
-  if (key.type === "event" || key.type === "sprite") {
-    return key.time;
+  // Only TweenKey has duration
+  if ("duration" in key) {
+    return key.time + key.duration;
   }
-  return key.time + key.duration;
+  return key.time;
 }
 
 export function getTrackDuration(track: Track): number {

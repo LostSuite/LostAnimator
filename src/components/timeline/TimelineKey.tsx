@@ -1,19 +1,21 @@
 import { useAnimator } from "../../context/AnimatorContext";
 import { timeToPixel } from "../../utils/timelineUtils";
-import type { Key } from "../../types";
+import type { Key, TrackType } from "../../types";
 
 interface TimelineKeyProps {
   trackId: string;
+  trackType: TrackType;
   keyData: Key;
   pixelsPerSecond: number;
   snapToGrid: boolean;
   gridSize: number;
-  onContextMenu: (e: React.MouseEvent, trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
-  onDoubleClick: (trackId: string, keyId: string, keyType: "sprite" | "tween" | "event") => void;
+  onContextMenu: (e: React.MouseEvent, trackId: string, keyId: string, keyType: TrackType) => void;
+  onDoubleClick: (trackId: string, keyId: string, keyType: TrackType) => void;
 }
 
 export function TimelineKey({
   trackId,
+  trackType,
   keyData,
   pixelsPerSecond,
   snapToGrid,
@@ -30,14 +32,15 @@ export function TimelineKey({
 
   const timePosition = timeToPixel(keyData.time, pixelsPerSecond);
 
-  // Calculate width based on key type
-  const isEvent = keyData.type === "event";
-  const isSprite = keyData.type === "sprite";
+  // Calculate width based on track type
+  const isEvent = trackType === "event";
+  const isSprite = trackType === "sprite";
+  const isTween = trackType === "tween";
 
   let width: number;
   if (isEvent || isSprite) {
     width = 12; // Event and sprite keys are small square markers
-  } else if (keyData.type === "tween") {
+  } else if (isTween && "duration" in keyData) {
     // Tween keys have their own duration
     width = timeToPixel(keyData.duration, pixelsPerSecond);
   } else {
@@ -48,7 +51,7 @@ export function TimelineKey({
   const left = (isEvent || isSprite) ? timePosition - width / 2 : timePosition;
 
   // Whether this key type can be resized (only tween keys)
-  const canResize = keyData.type === "tween";
+  const canResize = isTween;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -61,12 +64,12 @@ export function TimelineKey({
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
-    onContextMenu(e, trackId, keyData.id, keyData.type);
+    onContextMenu(e, trackId, keyData.id, trackType);
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onDoubleClick(trackId, keyData.id, keyData.type);
+    onDoubleClick(trackId, keyData.id, trackType);
   };
 
   const handleDragStart = (e: React.MouseEvent) => {
@@ -100,7 +103,7 @@ export function TimelineKey({
   };
 
   const handleResizeEnd = (e: React.MouseEvent) => {
-    if (!canResize) return; // Only tween keys can be resized
+    if (!canResize || !("duration" in keyData)) return; // Only tween keys can be resized
     e.preventDefault();
     e.stopPropagation();
     startBatch();
@@ -135,7 +138,7 @@ export function TimelineKey({
     sprite: "bg-blue-500",
     tween: "bg-green-500",
     event: "bg-amber-500",
-  }[keyData.type];
+  }[trackType];
 
   return (
     <div

@@ -2,20 +2,24 @@ import { useAnimator } from "../../context/AnimatorContext";
 import { SpriteKeyProperties } from "./SpriteKeyProperties";
 import { TweenKeyProperties } from "./TweenKeyProperties";
 import { EventKeyProperties } from "./EventKeyProperties";
+import type { SpriteKey, TweenKey, EventKey, TrackType } from "../../types";
 
 export function PropertiesPanel() {
   const { selection, selectedAnimation } = useAnimator();
 
-  // Find selected key
-  const selectedKey = (() => {
-    if (selection.type !== "key" || !selectedAnimation) return null;
+  // Find selected key and track type
+  const { selectedKey, trackType } = (() => {
+    if (selection.type !== "key" || !selectedAnimation) {
+      return { selectedKey: null, trackType: null };
+    }
 
     const track = selectedAnimation.tracks.find(
       (t) => t.id === selection.trackId
     );
-    if (!track) return null;
+    if (!track) return { selectedKey: null, trackType: null };
 
-    return track.keys.find((k) => k.id === selection.keyId) ?? null;
+    const key = track.keys.find((k) => k.id === selection.keyId) ?? null;
+    return { selectedKey: key, trackType: track.type as TrackType };
   })();
 
   return (
@@ -25,15 +29,15 @@ export function PropertiesPanel() {
       </div>
 
       <div className="px-3 pb-3 flex flex-col gap-3 overflow-y-auto min-h-0">
-        {/* Key properties */}
-        {selectedKey?.type === "sprite" && (
-          <SpriteKeyProperties keyData={selectedKey} />
+        {/* Key properties - use track type to determine which component */}
+        {selectedKey && trackType === "sprite" && (
+          <SpriteKeyProperties keyData={selectedKey as SpriteKey} />
         )}
-        {selectedKey?.type === "tween" && (
-          <TweenKeyProperties keyData={selectedKey} />
+        {selectedKey && trackType === "tween" && (
+          <TweenKeyProperties keyData={selectedKey as TweenKey} />
         )}
-        {selectedKey?.type === "event" && (
-          <EventKeyProperties keyData={selectedKey} />
+        {selectedKey && trackType === "event" && (
+          <EventKeyProperties keyData={selectedKey as EventKey} />
         )}
 
         {/* No key selected */}

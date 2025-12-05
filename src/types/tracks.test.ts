@@ -46,7 +46,6 @@ describe("key creators", () => {
   describe("createSpriteKey", () => {
     it("creates a sprite key with all properties", () => {
       const key = createSpriteKey("key-1", 0.5, [2, 3]);
-      expect(key.type).toBe("sprite");
       expect(key.id).toBe("key-1");
       expect(key.time).toBe(0.5);
       expect(key.frame).toEqual([2, 3]);
@@ -56,7 +55,6 @@ describe("key creators", () => {
   describe("createTweenKey", () => {
     it("creates a tween key with default easing", () => {
       const key = createTweenKey("key-2", 1, 0.5, "scale");
-      expect(key.type).toBe("tween");
       expect(key.id).toBe("key-2");
       expect(key.time).toBe(1);
       expect(key.duration).toBe(0.5);
@@ -73,7 +71,6 @@ describe("key creators", () => {
   describe("createEventKey", () => {
     it("creates an event key", () => {
       const key = createEventKey("key-4", 2.5, "jump");
-      expect(key.type).toBe("event");
       expect(key.id).toBe("key-4");
       expect(key.time).toBe(2.5);
       expect(key.name).toBe("jump");

@@ -5,9 +5,17 @@ import { SpritePreview } from "../preview/SpritePreview";
 import { SpritesheetList, SpritesheetModal } from "../spritesheet";
 import { Timeline } from "../timeline/Timeline";
 import { PropertiesPanel } from "../properties/PropertiesPanel";
+import { BrokenReferencesModal } from "../modals/BrokenReferencesModal";
 
 export function AppLayout() {
-  const { selectedAnimation, selectedSpritesheetId, selectSpritesheet } = useAnimator();
+  const {
+    selectedAnimation,
+    selectedSpritesheetId,
+    selectSpritesheet,
+    brokenReferences,
+    relocateSpritesheet,
+    clearBrokenReferences,
+  } = useAnimator();
   const [previewHeight, setPreviewHeight] = useState(192); // Default h-48 = 192px
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -91,6 +99,15 @@ export function AppLayout() {
         <SpritesheetModal
           spritesheetId={selectedSpritesheetId}
           onClose={() => selectSpritesheet(null)}
+        />
+      )}
+
+      {/* Broken references modal */}
+      {brokenReferences.length > 0 && (
+        <BrokenReferencesModal
+          brokenReferences={brokenReferences}
+          onRelocate={relocateSpritesheet}
+          onClose={clearBrokenReferences}
         />
       )}
     </div>

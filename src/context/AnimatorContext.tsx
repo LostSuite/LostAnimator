@@ -42,6 +42,7 @@ import {
   createNewFile,
 } from "../services/fileService";
 import { openImageFile, loadImage } from "../services/imageService";
+import type { BrokenReference } from "../components/modals/BrokenReferencesModal";
 
 interface AnimatorContextType {
   // File operations
@@ -62,6 +63,11 @@ interface AnimatorContextType {
   reorderSpritesheets: (fromIndex: number, toIndex: number) => void;
   selectSpritesheet: (id: string | null) => void;
   getSpritesheetForKey: (key: SpriteKey) => { config: Spritesheet; image: HTMLImageElement } | null;
+
+  // Broken references
+  brokenReferences: BrokenReference[];
+  relocateSpritesheet: (spritesheetId: string, newPath: string) => Promise<void>;
+  clearBrokenReferences: () => void;
 
   // Animations
   animations: Animation[];
@@ -147,6 +153,7 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
   const [filePath, setFilePath] = useState<string | null>(null);
   const filePathRef = useRef<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+  const [brokenReferences, setBrokenReferences] = useState<BrokenReference[]>([]);
 
   // Refs for menu callback functions (to avoid stale closures in event listeners)
   const saveFileRef = useRef<() => Promise<void>>(() => Promise.resolve());
@@ -204,6 +211,7 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
     setSelection({ type: "none" });
     setSpritesheetImages(new Map());
     setSelectedSpritesheetId(null);
+    setBrokenReferences([]);
   }, [undoControls]);
 
   const openFile = useCallback(async () => {
@@ -217,17 +225,24 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
     setSelection({ type: "none" });
     setSelectedSpritesheetId(null);
 
-    // Load all spritesheets
+    // Load all spritesheets and track failures
     const imageMap = new Map<string, HTMLImageElement>();
+    const broken: BrokenReference[] = [];
     for (const spritesheet of result.content.spritesheets) {
       try {
         const img = await loadImage(spritesheet.imagePath);
         imageMap.set(spritesheet.id, img);
       } catch (e) {
         console.error(`Failed to load spritesheet ${spritesheet.name}:`, e);
+        broken.push({
+          spritesheetId: spritesheet.id,
+          spritesheetName: spritesheet.name,
+          originalPath: spritesheet.imagePath,
+        });
       }
     }
     setSpritesheetImages(imageMap);
+    setBrokenReferences(broken);
   }, [undoControls]);
 
   const saveFile = useCallback(async () => {
@@ -338,6 +353,43 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
     },
     [animationFile.spritesheets, spritesheetImages]
   );
+
+  // Broken reference handling
+  const relocateSpritesheet = useCallback(
+    async (spritesheetId: string, newPath: string) => {
+      try {
+        // Try to load the image from the new path
+        const img = await loadImage(newPath);
+
+        // Update the spritesheet path in the file
+        updateFile((file) => ({
+          ...file,
+          spritesheets: file.spritesheets.map((s) =>
+            s.id === spritesheetId ? { ...s, imagePath: newPath } : s
+          ),
+        }));
+
+        // Add to loaded images
+        setSpritesheetImages((prev) => {
+          const next = new Map(prev);
+          next.set(spritesheetId, img);
+          return next;
+        });
+
+        // Remove from broken references
+        setBrokenReferences((prev) =>
+          prev.filter((ref) => ref.spritesheetId !== spritesheetId)
+        );
+      } catch (e) {
+        console.error(`Failed to load image from new path: ${newPath}`, e);
+      }
+    },
+    [updateFile]
+  );
+
+  const clearBrokenReferences = useCallback(() => {
+    setBrokenReferences([]);
+  }, []);
 
   // Animation CRUD
   const selectAnimation = useCallback((id: string | null) => {
@@ -758,6 +810,11 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
     reorderSpritesheets,
     selectSpritesheet,
     getSpritesheetForKey,
+
+    // Broken references
+    brokenReferences,
+    relocateSpritesheet,
+    clearBrokenReferences,
 
     // Animations
     animations: animationFile.animations,

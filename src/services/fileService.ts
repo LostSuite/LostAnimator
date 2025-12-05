@@ -48,7 +48,7 @@ function toAbsolutePath(relativePath: string, baseDir: string): string {
 export async function openAnimationFile(): Promise<OpenFileResult | null> {
   const selected = await open({
     title: "Open Animation File",
-    filters: [{ name: "Animation", extensions: ["lostanim"] }],
+    filters: [{ name: "Animation", extensions: ["lostanim", "json"] }],
   });
 
   if (!selected) return null;

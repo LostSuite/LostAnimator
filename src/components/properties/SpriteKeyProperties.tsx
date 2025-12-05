@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAnimator } from "../../context/AnimatorContext";
 import { DragNumberInput } from "../ui/DragNumberInput";
+import { CoordinateInput } from "../ui/CoordinateInput";
 import type { SpriteKey } from "../../types";
 
 type FlipValue = "horizontal" | "vertical" | "both" | undefined;
@@ -142,28 +143,28 @@ export function SpriteKeyProperties({ keyData }: SpriteKeyPropertiesProps) {
         label="Time"
       />
 
-      <div className="grid grid-cols-2 gap-2">
-        <DragNumberInput
-          value={keyData.frame[0]}
-          onChange={(x) => handleUpdate({ frame: [Math.round(x), keyData.frame[1]] })}
-          onInput={(x) => handleUpdate({ frame: [Math.round(x), keyData.frame[1]] })}
-          min={0}
-          max={maxFrameX}
-          dragSpeed={0.1}
-          precision={0}
-          label="Frame X"
-        />
-        <DragNumberInput
-          value={keyData.frame[1]}
-          onChange={(y) => handleUpdate({ frame: [keyData.frame[0], Math.round(y)] })}
-          onInput={(y) => handleUpdate({ frame: [keyData.frame[0], Math.round(y)] })}
-          min={0}
-          max={maxFrameY}
-          dragSpeed={0.1}
-          precision={0}
-          label="Frame Y"
-        />
-      </div>
+      <CoordinateInput
+        label="Frame"
+        x={keyData.frame[0]}
+        y={keyData.frame[1]}
+        onXChange={(x) => handleUpdate({ frame: [Math.round(x), keyData.frame[1]] })}
+        onYChange={(y) => handleUpdate({ frame: [keyData.frame[0], Math.round(y)] })}
+        min={0}
+        maxX={maxFrameX}
+        maxY={maxFrameY}
+        dragSpeed={0.1}
+        precision={0}
+      />
+
+      <CoordinateInput
+        label="Offset"
+        x={keyData.offset[0]}
+        y={keyData.offset[1]}
+        onXChange={(x) => handleUpdate({ offset: [x, keyData.offset[1]] })}
+        onYChange={(y) => handleUpdate({ offset: [keyData.offset[0], y] })}
+        dragSpeed={1}
+        precision={0}
+      />
 
       <FlipDropdown
         value={keyData.flip}

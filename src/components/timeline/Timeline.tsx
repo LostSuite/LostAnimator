@@ -344,7 +344,6 @@ export function Timeline() {
       });
     } else if (trackType === "tween") {
       addKey(trackId, {
-        type: "tween",
         id: keyId,
         time,
         duration: 0.5,
@@ -353,7 +352,6 @@ export function Timeline() {
       });
     } else if (trackType === "event") {
       addKey(trackId, {
-        type: "event",
         id: keyId,
         time,
         name: "",
@@ -370,7 +368,7 @@ export function Timeline() {
     // Find the key to get its current values
     const track = selectedAnimation?.tracks.find((t) => t.id === trackId);
     const key = track?.keys.find((k) => k.id === keyId);
-    if (!key || key.type !== "sprite") return;
+    if (!key || !("frame" in key)) return; // Type guard for SpriteKey
 
     setSpritePicker({
       trackId,
@@ -423,7 +421,7 @@ export function Timeline() {
         // Find the key to get its current values
         const track = selectedAnimation?.tracks.find((t) => t.id === trackId);
         const key = track?.keys.find((k) => k.id === keyId);
-        if (!key || key.type !== "sprite") return;
+        if (!key || !("frame" in key)) return; // Type guard for SpriteKey
 
         setSpritePicker({
           trackId,
@@ -453,11 +451,11 @@ export function Timeline() {
         // Creating new key
         const keyId = crypto.randomUUID();
         addKey(spritePicker.trackId, {
-          type: "sprite",
           id: keyId,
           time: spritePicker.time,
           spritesheetId,
           frame,
+          offset: [0, 0],
         });
       }
       setSpritePicker(null);
@@ -554,13 +552,12 @@ export function Timeline() {
     const rows = Math.floor(image.height / defaultSheet.tileHeight);
 
     // Find the last sprite key to get its frame, or start at [-1, 0] to produce [0, 0]
-    const spriteKeys = spriteTrack.keys.filter((k) => k.type === "sprite");
-    const lastKey = spriteKeys.length > 0 ? spriteKeys[spriteKeys.length - 1] : null;
+    const lastKey = spriteTrack.keys.length > 0 ? spriteTrack.keys[spriteTrack.keys.length - 1] : null;
 
     let nextFrame: [number, number];
     let spritesheetId = defaultSheet.id;
 
-    if (lastKey && lastKey.type === "sprite") {
+    if (lastKey) {
       const [x, y] = lastKey.frame;
       spritesheetId = lastKey.spritesheetId ?? defaultSheet.id;
 
@@ -588,14 +585,15 @@ export function Timeline() {
     const baseTime = lastKey ? lastKey.time : playback.currentTime;
     const newTime = baseTime + timeline.gridSize;
 
-    // Create the new key
+    // Create the new key (copy offset and flip from last key)
     const keyId = crypto.randomUUID();
     addKey(spriteTrack.id, {
-      type: "sprite",
       id: keyId,
       time: newTime,
       spritesheetId,
       frame: nextFrame,
+      offset: lastKey ? lastKey.offset : [0, 0],
+      flip: lastKey?.flip,
     });
 
     // Select the new key

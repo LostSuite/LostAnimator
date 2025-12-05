@@ -119,8 +119,9 @@ export function SpritePreview() {
         );
         const dw = tileWidth * scale;
         const dh = tileHeight * scale;
-        const dx = (canvas.width - dw) / 2;
-        const dy = (canvas.height - dh) / 2;
+        // Apply offset (scaled)
+        const dx = (canvas.width - dw) / 2 + spriteKey.offset[0] * scale;
+        const dy = (canvas.height - dh) / 2 + spriteKey.offset[1] * scale;
 
         // Handle flipping
         ctx.save();

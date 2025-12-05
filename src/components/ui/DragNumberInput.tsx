@@ -13,6 +13,7 @@ interface DragNumberInputProps {
   className?: string;
   label?: string;
   layout?: "vertical" | "horizontal";
+  roundedLeft?: boolean;
 }
 
 export function DragNumberInput({
@@ -26,6 +27,7 @@ export function DragNumberInput({
   className = "",
   label,
   layout = "vertical",
+  roundedLeft = true,
 }: DragNumberInputProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -147,7 +149,7 @@ export function DragNumberInput({
           onBlur={handleInputBlur}
           onKeyDown={handleInputKeyDown}
           onFocus={handleFocus}
-          className={`${isHorizontal ? "w-16" : "w-full"} px-2 py-1 text-xs rounded font-mono transition-colors ${
+          className={`${isHorizontal ? "w-16" : "w-full"} px-2 py-1 text-xs ${roundedLeft ? "rounded" : "rounded-r"} font-mono transition-colors ${
             isEditing
               ? "bg-zinc-700 text-zinc-100 border border-blue-500 outline-none"
               : "bg-zinc-700/50 text-zinc-300 border border-zinc-600/50 cursor-ew-resize hover:border-zinc-500 focus:border-blue-500 focus:outline-none"

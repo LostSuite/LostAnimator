@@ -5,6 +5,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useRef,
 } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useUndoableReducer } from "../hooks/useUndoableReducer";
@@ -144,7 +145,23 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
     createDefaultTimelineViewState()
   );
   const [filePath, setFilePath] = useState<string | null>(null);
+  const filePathRef = useRef<string | null>(null);
   const [isDirty, setIsDirty] = useState(false);
+
+  // Refs for menu callback functions (to avoid stale closures in event listeners)
+  const saveFileRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const saveFileAsRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const newFileRef = useRef<() => void>(() => {});
+  const openFileRef = useRef<() => Promise<void>>(() => Promise.resolve());
+  const timelineRef = useRef(timeline);
+
+  // Keep refs in sync with state for use in event listeners
+  useEffect(() => {
+    filePathRef.current = filePath;
+  }, [filePath]);
+  useEffect(() => {
+    timelineRef.current = timeline;
+  }, [timeline]);
 
   // Register undo/redo with global keyboard shortcuts
   useRegisterUndoRedo({
@@ -157,6 +174,17 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
   // Computed values
   const selectedAnimation =
     animationFile.animations.find((a) => a.id === selectedAnimationId) ?? null;
+
+  // Sync timeline settings when selected animation changes
+  useEffect(() => {
+    if (selectedAnimation) {
+      setTimeline((t) => ({
+        ...t,
+        snapToGrid: selectedAnimation.snapToGrid,
+        gridSize: selectedAnimation.gridSize,
+      }));
+    }
+  }, [selectedAnimationId]); // Only trigger on animation selection change, not on every animation update
 
   // Helper to update and mark dirty
   const updateFile = useCallback(
@@ -203,12 +231,13 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
   }, [undoControls]);
 
   const saveFile = useCallback(async () => {
-    const savedPath = await saveAnimationFile(animationFile, filePath);
+    // Use ref to get current filePath to avoid stale closure issues with event listeners
+    const savedPath = await saveAnimationFile(animationFile, filePathRef.current);
     if (savedPath) {
       setFilePath(savedPath);
       setIsDirty(false);
     }
-  }, [animationFile, filePath]);
+  }, [animationFile]);
 
   const saveFileAs = useCallback(async () => {
     const savedPath = await saveAnimationFile(animationFile, null);
@@ -217,6 +246,12 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
       setIsDirty(false);
     }
   }, [animationFile]);
+
+  // Keep function refs in sync (for menu event listeners)
+  useEffect(() => { newFileRef.current = newFile; }, [newFile]);
+  useEffect(() => { openFileRef.current = openFile; }, [openFile]);
+  useEffect(() => { saveFileRef.current = saveFile; }, [saveFile]);
+  useEffect(() => { saveFileAsRef.current = saveFileAs; }, [saveFileAs]);
 
   // Spritesheets
   const addSpritesheet = useCallback(async () => {
@@ -628,31 +663,81 @@ export function AnimatorProvider({ children }: AnimatorProviderProps) {
 
   const setSnapToGrid = useCallback((enabled: boolean) => {
     setTimeline((t) => ({ ...t, snapToGrid: enabled }));
-  }, []);
+    // Also update the selected animation
+    if (selectedAnimationId) {
+      updateFile((file) => ({
+        ...file,
+        animations: file.animations.map((a) =>
+          a.id === selectedAnimationId ? { ...a, snapToGrid: enabled } : a
+        ),
+      }));
+    }
+  }, [selectedAnimationId, updateFile]);
 
   const setGridSize = useCallback((size: number) => {
-    setTimeline((t) => ({ ...t, gridSize: Math.max(0.01, size) }));
-  }, []);
+    const clampedSize = Math.max(0.01, size);
+    setTimeline((t) => ({ ...t, gridSize: clampedSize }));
+    // Also update the selected animation
+    if (selectedAnimationId) {
+      updateFile((file) => ({
+        ...file,
+        animations: file.animations.map((a) =>
+          a.id === selectedAnimationId ? { ...a, gridSize: clampedSize } : a
+        ),
+      }));
+    }
+  }, [selectedAnimationId, updateFile]);
 
-  // Listen for menu events from Tauri
+  // Listen for menu events from Tauri (set up once, use refs to call latest functions)
   useEffect(() => {
+    let mounted = true;
     const unlisteners: (() => void)[] = [];
 
     const setupListeners = async () => {
-      unlisteners.push(await listen("menu-new", () => newFile()));
-      unlisteners.push(await listen("menu-open", () => openFile()));
-      unlisteners.push(await listen("menu-save", () => saveFile()));
-      unlisteners.push(await listen("menu-save-as", () => saveFileAs()));
-      unlisteners.push(await listen("menu-undo", () => undoControls.undo()));
-      unlisteners.push(await listen("menu-redo", () => undoControls.redo()));
+      const u1 = await listen("menu-new", () => {
+        if (!mounted) return;
+        newFileRef.current();
+      });
+      if (mounted) unlisteners.push(u1);
+
+      const u2 = await listen("menu-open", () => {
+        if (!mounted) return;
+        openFileRef.current();
+      });
+      if (mounted) unlisteners.push(u2);
+
+      const u3 = await listen("menu-save", () => {
+        if (!mounted) return;
+        saveFileRef.current();
+      });
+      if (mounted) unlisteners.push(u3);
+
+      const u4 = await listen("menu-save-as", () => {
+        if (!mounted) return;
+        saveFileAsRef.current();
+      });
+      if (mounted) unlisteners.push(u4);
+
+      const u5 = await listen("menu-undo", () => {
+        if (!mounted) return;
+        undoControls.undo();
+      });
+      if (mounted) unlisteners.push(u5);
+
+      const u6 = await listen("menu-redo", () => {
+        if (!mounted) return;
+        undoControls.redo();
+      });
+      if (mounted) unlisteners.push(u6);
     };
 
     setupListeners();
 
     return () => {
+      mounted = false;
       unlisteners.forEach((unlisten) => unlisten());
     };
-  }, [newFile, openFile, saveFile, saveFileAs, undoControls]);
+  }, [undoControls]);
 
   const value: AnimatorContextType = {
     // File

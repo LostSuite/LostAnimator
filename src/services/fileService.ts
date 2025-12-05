@@ -48,7 +48,7 @@ function toAbsolutePath(relativePath: string, baseDir: string): string {
 export async function openAnimationFile(): Promise<OpenFileResult | null> {
   const selected = await open({
     title: "Open Animation File",
-    filters: [{ name: "Animation", extensions: ["json", "anim"] }],
+    filters: [{ name: "Animation", extensions: ["lostanim"] }],
   });
 
   if (!selected) return null;
@@ -84,8 +84,8 @@ export async function saveAnimationFile(
   if (!targetPath) {
     const selected = await save({
       title: "Save Animation File",
-      defaultPath: "animation.json",
-      filters: [{ name: "Animation", extensions: ["json"] }],
+      defaultPath: "animation.lostanim",
+      filters: [{ name: "Animation", extensions: ["lostanim"] }],
     });
 
     if (!selected) return null;

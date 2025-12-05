@@ -1,27 +1,33 @@
-import { Track } from "./tracks";
+import { z } from "zod";
+import { TrackSchema } from "./tracks";
 
-export interface Spritesheet {
-  id: string;
-  name: string;  // Display name from filename
-  imagePath: string;
-  tileWidth: number;
-  tileHeight: number;
-  // columns and rows are computed from image dimensions / tile dimensions
-}
+export const SpritesheetSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  imagePath: z.string(),
+  tileWidth: z.number(),
+  tileHeight: z.number(),
+});
+export type Spritesheet = z.infer<typeof SpritesheetSchema>;
 
-export interface AnimationFile {
-  version: "1.0";
-  spritesheets: Spritesheet[];
-  animations: Animation[];
-}
+export const AnimationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  loop: z.boolean(),
+  duration: z.number(),
+  tracks: z.array(TrackSchema),
+  // Editor settings per animation
+  snapToGrid: z.boolean().default(true),
+  gridSize: z.number().default(0.1),
+});
+export type Animation = z.infer<typeof AnimationSchema>;
 
-export interface Animation {
-  id: string;
-  name: string;
-  loop: boolean;
-  duration: number; // Total animation duration in seconds
-  tracks: Track[];
-}
+export const AnimationFileSchema = z.object({
+  version: z.literal("1.0"),
+  spritesheets: z.array(SpritesheetSchema),
+  animations: z.array(AnimationSchema),
+});
+export type AnimationFile = z.infer<typeof AnimationFileSchema>;
 
 export function createDefaultAnimationFile(): AnimationFile {
   return {
@@ -38,5 +44,7 @@ export function createDefaultAnimation(id: string, name: string): Animation {
     loop: true,
     duration: 1, // Default 1 second
     tracks: [],
+    snapToGrid: true,
+    gridSize: 0.1,
   };
 }

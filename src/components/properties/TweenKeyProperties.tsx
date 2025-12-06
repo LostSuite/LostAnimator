@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useAnimator } from "../../context/AnimatorContext";
 import { DragNumberInput } from "../ui/DragNumberInput";
+import { AnchorsSection } from "./AnchorsSection";
 import type { TweenKey, EasingType } from "../../types";
 
 interface TweenKeyPropertiesProps {
@@ -118,42 +119,54 @@ export function TweenKeyProperties({ keyData }: TweenKeyPropertiesProps) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1">
-        <span className="text-xs text-zinc-400">Event</span>
-        <input
-          type="text"
-          value={keyData.name}
-          onChange={(e) => handleUpdate({ name: e.target.value })}
-          className="bg-zinc-700 rounded px-2 py-1 text-sm"
-          placeholder="event_name"
+    <>
+      {/* Key properties */}
+      <div className="flex-shrink-0 flex flex-col gap-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-zinc-400">Name</span>
+          <input
+            type="text"
+            spellCheck={false}
+            value={keyData.name}
+            onChange={(e) => handleUpdate({ name: e.target.value })}
+            className="bg-zinc-700 rounded px-2 py-1 text-sm"
+            placeholder="tween_name"
+          />
+        </label>
+
+        <DragNumberInput
+          value={keyData.time}
+          onChange={(time) => handleUpdate({ time })}
+          onInput={(time) => handleUpdate({ time })}
+          min={0}
+          dragSpeed={0.01}
+          precision={2}
+          label="Time"
         />
-      </label>
 
-      <DragNumberInput
-        value={keyData.time}
-        onChange={(time) => handleUpdate({ time })}
-        onInput={(time) => handleUpdate({ time })}
-        min={0}
-        dragSpeed={0.01}
-        precision={2}
-        label="Time"
-      />
+        <DragNumberInput
+          value={keyData.duration}
+          onChange={(duration) => handleUpdate({ duration: Math.max(0.01, duration) })}
+          onInput={(duration) => handleUpdate({ duration: Math.max(0.01, duration) })}
+          min={0.01}
+          dragSpeed={0.01}
+          precision={2}
+          label="Duration"
+        />
 
-      <DragNumberInput
-        value={keyData.duration}
-        onChange={(duration) => handleUpdate({ duration: Math.max(0.01, duration) })}
-        onInput={(duration) => handleUpdate({ duration: Math.max(0.01, duration) })}
-        min={0.01}
-        dragSpeed={0.01}
-        precision={2}
-        label="Duration"
-      />
+        <EasingDropdown
+          value={keyData.easing}
+          onChange={(easing) => handleUpdate({ easing })}
+        />
+      </div>
 
-      <EasingDropdown
-        value={keyData.easing}
-        onChange={(easing) => handleUpdate({ easing })}
-      />
-    </div>
+      {/* Anchors section - fills remaining space */}
+      <div className="mt-3 -mx-3 flex-1 flex flex-col min-h-0">
+        <AnchorsSection
+          anchors={keyData.anchors}
+          onUpdate={(anchors) => handleUpdate({ anchors })}
+        />
+      </div>
+    </>
   );
 }

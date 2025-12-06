@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useAnimator } from "../../context/AnimatorContext";
 import { DragNumberInput } from "../ui/DragNumberInput";
 import { CoordinateInput } from "../ui/CoordinateInput";
+import { AnchorsSection } from "./AnchorsSection";
 import type { SpriteKey } from "../../types";
 
 type FlipValue = "horizontal" | "vertical" | "both" | undefined;
@@ -132,43 +133,57 @@ export function SpriteKeyProperties({ keyData }: SpriteKeyPropertiesProps) {
     : 999;
 
   return (
-    <div className="flex flex-col gap-3">
-      <DragNumberInput
-        value={keyData.time}
-        onChange={(time) => handleUpdate({ time })}
-        onInput={(time) => handleUpdate({ time })}
-        min={0}
-        dragSpeed={0.01}
-        precision={2}
-        label="Time"
-      />
+    <div className="flex flex-col h-full min-h-0">
+      {/* Properties header */}
+      <div className="h-9 flex-shrink-0 px-3 flex items-center border-b border-zinc-700/50">
+        <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Properties</span>
+      </div>
 
-      <CoordinateInput
-        label="Frame"
-        x={keyData.frame[0]}
-        y={keyData.frame[1]}
-        onXChange={(x) => handleUpdate({ frame: [Math.round(x), keyData.frame[1]] })}
-        onYChange={(y) => handleUpdate({ frame: [keyData.frame[0], Math.round(y)] })}
-        min={0}
-        maxX={maxFrameX}
-        maxY={maxFrameY}
-        dragSpeed={0.1}
-        precision={0}
-      />
+      {/* Key properties */}
+      <div className="flex-shrink-0 p-3 flex flex-col gap-3">
+        <DragNumberInput
+          value={keyData.time}
+          onChange={(time) => handleUpdate({ time })}
+          onInput={(time) => handleUpdate({ time })}
+          min={0}
+          dragSpeed={0.01}
+          precision={2}
+          label="Time"
+        />
 
-      <CoordinateInput
-        label="Offset"
-        x={keyData.offset[0]}
-        y={keyData.offset[1]}
-        onXChange={(x) => handleUpdate({ offset: [x, keyData.offset[1]] })}
-        onYChange={(y) => handleUpdate({ offset: [keyData.offset[0], y] })}
-        dragSpeed={1}
-        precision={0}
-      />
+        <CoordinateInput
+          label="Frame"
+          x={keyData.frame.x}
+          y={keyData.frame.y}
+          onXChange={(x) => handleUpdate({ frame: { x: Math.round(x), y: keyData.frame.y } })}
+          onYChange={(y) => handleUpdate({ frame: { x: keyData.frame.x, y: Math.round(y) } })}
+          min={0}
+          maxX={maxFrameX}
+          maxY={maxFrameY}
+          dragSpeed={0.1}
+          precision={0}
+        />
 
-      <FlipDropdown
-        value={keyData.flip}
-        onChange={(flip) => handleUpdate({ flip })}
+        <CoordinateInput
+          label="Offset"
+          x={keyData.offset.x}
+          y={keyData.offset.y}
+          onXChange={(x) => handleUpdate({ offset: { x, y: keyData.offset.y } })}
+          onYChange={(y) => handleUpdate({ offset: { x: keyData.offset.x, y } })}
+          dragSpeed={1}
+          precision={0}
+        />
+
+        <FlipDropdown
+          value={keyData.flip}
+          onChange={(flip) => handleUpdate({ flip })}
+        />
+      </div>
+
+      {/* Anchors section - fills remaining space */}
+      <AnchorsSection
+        anchors={keyData.anchors}
+        onUpdate={(anchors) => handleUpdate({ anchors })}
       />
     </div>
   );

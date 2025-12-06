@@ -144,6 +144,7 @@ export function DragNumberInput({
         <input
           ref={inputRef}
           type="text"
+          spellCheck={false}
           value={inputValue}
           onChange={handleInputChange}
           onBlur={handleInputBlur}

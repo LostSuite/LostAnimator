@@ -114,6 +114,7 @@ export function TimelineTrack({
           <input
             ref={inputRef}
             type="text"
+            spellCheck={false}
             value={renameValue}
             onChange={(e) => setRenameValue(e.target.value)}
             onKeyDown={handleRenameKeyDown}

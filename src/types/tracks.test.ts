@@ -45,10 +45,10 @@ describe("track creators", () => {
 describe("key creators", () => {
   describe("createSpriteKey", () => {
     it("creates a sprite key with all properties", () => {
-      const key = createSpriteKey("key-1", 0.5, [2, 3]);
+      const key = createSpriteKey("key-1", 0.5, { x: 2, y: 3 });
       expect(key.id).toBe("key-1");
       expect(key.time).toBe(0.5);
-      expect(key.frame).toEqual([2, 3]);
+      expect(key.frame).toEqual({ x: 2, y: 3 });
     });
   });
 
@@ -80,7 +80,7 @@ describe("key creators", () => {
 
 describe("getKeyEndTime", () => {
   it("returns just time for sprite keys (duration calculated elsewhere)", () => {
-    const key = createSpriteKey("id", 1, [0, 0]);
+    const key = createSpriteKey("id", 1, { x: 0, y: 0 });
     expect(getKeyEndTime(key)).toBe(1);
   });
 
@@ -103,16 +103,16 @@ describe("getTrackDuration", () => {
 
   it("returns the time of the last sprite key", () => {
     const track = createSpriteTrack("id", "Test");
-    track.keys.push(createSpriteKey("k1", 0, [0, 0]));
-    track.keys.push(createSpriteKey("k2", 0.5, [1, 0]));
+    track.keys.push(createSpriteKey("k1", 0, { x: 0, y: 0 }));
+    track.keys.push(createSpriteKey("k2", 0.5, { x: 1, y: 0 }));
     // Sprite keys no longer have duration, so max is just the last time
     expect(getTrackDuration(track)).toBe(0.5);
   });
 
   it("handles keys that are not in chronological order", () => {
     const track = createSpriteTrack("id", "Test");
-    track.keys.push(createSpriteKey("k1", 2, [0, 0]));
-    track.keys.push(createSpriteKey("k2", 0, [1, 0]));
+    track.keys.push(createSpriteKey("k1", 2, { x: 0, y: 0 }));
+    track.keys.push(createSpriteKey("k2", 0, { x: 1, y: 0 }));
     // Max time is 2 (sprite keys have no duration)
     expect(getTrackDuration(track)).toBe(2);
   });

@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+// Point type for coordinates
+export const PointSchema = z.object({
+  x: z.number(),
+  y: z.number(),
+});
+export type Point = z.infer<typeof PointSchema>;
+
 // Easing types
 export const EasingTypeSchema = z.enum([
   "Linear",
@@ -15,8 +22,9 @@ export type EasingType = z.infer<typeof EasingTypeSchema>;
 export const SpriteKeySchema = z.object({
   id: z.string(),
   time: z.number(),
-  frame: z.tuple([z.number(), z.number()]),
-  offset: z.tuple([z.number(), z.number()]).default([0, 0]),
+  frame: PointSchema.default({ x: 0, y: 0 }),
+  offset: PointSchema.default({ x: 0, y: 0 }),
+  anchors: z.record(z.string(), PointSchema).default({}),
   spritesheetId: z.string().optional(),
   flip: z.enum(["horizontal", "vertical", "both"]).optional(),
 });
@@ -28,6 +36,7 @@ export const TweenKeySchema = z.object({
   duration: z.number(),
   name: z.string(),
   easing: EasingTypeSchema,
+  anchors: z.record(z.string(), PointSchema).default({}),
 });
 export type TweenKey = z.infer<typeof TweenKeySchema>;
 
@@ -35,6 +44,7 @@ export const EventKeySchema = z.object({
   id: z.string(),
   time: z.number(),
   name: z.string(),
+  anchors: z.record(z.string(), PointSchema).default({}),
 });
 export type EventKey = z.infer<typeof EventKeySchema>;
 
@@ -92,9 +102,9 @@ export function createEventTrack(id: string, name: string): EventTrack {
 export function createSpriteKey(
   id: string,
   time: number,
-  frame: [number, number]
+  frame: Point
 ): SpriteKey {
-  return { id, time, frame, offset: [0, 0] };
+  return { id, time, frame, offset: { x: 0, y: 0 }, anchors: {} };
 }
 
 export function createTweenKey(
@@ -104,11 +114,11 @@ export function createTweenKey(
   name: string,
   easing: EasingType = "Linear"
 ): TweenKey {
-  return { id, time, duration, name, easing };
+  return { id, time, duration, name, easing, anchors: {} };
 }
 
 export function createEventKey(id: string, time: number, name: string): EventKey {
-  return { id, time, name };
+  return { id, time, name, anchors: {} };
 }
 
 // Utility functions

@@ -5,8 +5,8 @@ import { useCanvasZoomPan } from "../../hooks/useCanvasZoomPan";
 
 interface SpritePickerModalProps {
   initialSpritesheetId?: string;
-  initialFrame?: [number, number];
-  onConfirm: (spritesheetId: string, frame: [number, number]) => void;
+  initialFrame?: { x: number; y: number };
+  onConfirm: (spritesheetId: string, frame: { x: number; y: number }) => void;
   onCancel: () => void;
 }
 
@@ -48,12 +48,12 @@ export function SpritePickerModal({
   );
 
   // Selected frame
-  const [selectedFrame, setSelectedFrame] = useState<[number, number]>(
-    initialFrame ?? [0, 0]
+  const [selectedFrame, setSelectedFrame] = useState<{ x: number; y: number }>(
+    initialFrame ?? { x: 0, y: 0 }
   );
 
   // Hovered frame
-  const [hoveredFrame, setHoveredFrame] = useState<[number, number] | null>(null);
+  const [hoveredFrame, setHoveredFrame] = useState<{ x: number; y: number } | null>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const initializedRef = useRef(false);
@@ -131,7 +131,7 @@ export function SpritePickerModal({
 
   // Get tile coordinates from mouse position
   const getTileFromMouse = useCallback(
-    (e: React.MouseEvent): [number, number] | null => {
+    (e: React.MouseEvent): { x: number; y: number } | null => {
       if (!image || !selectedSheet) return null;
 
       const canvas = canvasRef.current;
@@ -158,7 +158,7 @@ export function SpritePickerModal({
 
       if (col >= columns || row >= rows) return null;
 
-      return [col, row];
+      return { x: col, y: row };
     },
     [image, selectedSheet, transform]
   );
@@ -261,11 +261,10 @@ export function SpritePickerModal({
 
     // Draw hovered tile
     if (hoveredFrame) {
-      const [hCol, hRow] = hoveredFrame;
       ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
       ctx.fillRect(
-        hCol * selectedSheet.tileWidth,
-        hRow * selectedSheet.tileHeight,
+        hoveredFrame.x * selectedSheet.tileWidth,
+        hoveredFrame.y * selectedSheet.tileHeight,
         selectedSheet.tileWidth,
         selectedSheet.tileHeight
       );
@@ -275,8 +274,8 @@ export function SpritePickerModal({
     ctx.strokeStyle = "#3b82f6";
     ctx.lineWidth = 2 / transform.scale;
     ctx.strokeRect(
-      selectedFrame[0] * selectedSheet.tileWidth,
-      selectedFrame[1] * selectedSheet.tileHeight,
+      selectedFrame.x * selectedSheet.tileWidth,
+      selectedFrame.y * selectedSheet.tileHeight,
       selectedSheet.tileWidth,
       selectedSheet.tileHeight
     );
@@ -284,8 +283,8 @@ export function SpritePickerModal({
     // Fill selected tile with semi-transparent blue
     ctx.fillStyle = "rgba(59, 130, 246, 0.3)";
     ctx.fillRect(
-      selectedFrame[0] * selectedSheet.tileWidth,
-      selectedFrame[1] * selectedSheet.tileHeight,
+      selectedFrame.x * selectedSheet.tileWidth,
+      selectedFrame.y * selectedSheet.tileHeight,
       selectedSheet.tileWidth,
       selectedSheet.tileHeight
     );
@@ -363,7 +362,7 @@ export function SpritePickerModal({
                   key={sheet.id}
                   onClick={() => {
                     setSelectedSheetId(sheet.id);
-                    setSelectedFrame([0, 0]);
+                    setSelectedFrame({ x: 0, y: 0 });
                   }}
                   className={`w-full px-3 py-2 text-left text-xs flex items-center gap-2 ${
                     sheet.id === selectedSheetId
@@ -415,7 +414,7 @@ export function SpritePickerModal({
               </span>
               <div className="flex-1" />
               <span className="text-xs text-zinc-400">
-                Frame: [{selectedFrame[0]}, {selectedFrame[1]}]
+                Frame: ({selectedFrame.x}, {selectedFrame.y})
               </span>
             </div>
 

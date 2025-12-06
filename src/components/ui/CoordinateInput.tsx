@@ -1,7 +1,7 @@
 import { DragNumberInput } from "./DragNumberInput";
 
 export interface CoordinateInputProps {
-  label: string;
+  label?: string;
   x: number;
   y: number;
   onXChange: (newX: number) => void;
@@ -33,7 +33,7 @@ export function CoordinateInput({
 }: CoordinateInputProps) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[10px] text-zinc-500 uppercase">{label}</span>
+      {label && <span className="text-[10px] text-zinc-500 uppercase">{label}</span>}
       <div className="flex gap-1">
         {/* X Input */}
         <div className="flex flex-1">

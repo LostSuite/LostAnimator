@@ -74,6 +74,7 @@ export function AnimationListItem({
         <input
           ref={inputRef}
           type="text"
+          spellCheck={false}
           value={editName}
           onChange={(e) => setEditName(e.target.value)}
           onBlur={() => onEditComplete(editName)}

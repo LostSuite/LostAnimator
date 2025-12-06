@@ -47,9 +47,16 @@ export function AppLayout() {
     <div className="flex flex-col h-screen bg-zinc-900 text-zinc-100 select-none">
       {/* Main content */}
       <div className="flex flex-1 overflow-hidden min-h-0">
-        {/* Left panel - Animations only */}
+        {/* Left panel - Animations + Spritesheets */}
         <div className="w-52 flex-shrink-0 border-r border-zinc-700/50 flex flex-col bg-zinc-800/30">
-          <AnimationList />
+          {/* Animation list - top half */}
+          <div className="h-1/2 flex-shrink-0 border-b border-zinc-700/50 flex flex-col min-h-0">
+            <AnimationList />
+          </div>
+          {/* Spritesheet list - bottom half */}
+          <div className="h-1/2 flex flex-col min-h-0">
+            <SpritesheetList />
+          </div>
         </div>
 
         {/* Center panel */}
@@ -80,17 +87,9 @@ export function AppLayout() {
           </div>
         </div>
 
-        {/* Right panel - Spritesheet + Properties */}
-        <div className="w-56 flex-shrink-0 border-l border-zinc-700/50 flex flex-col bg-zinc-800/30">
-          {/* Spritesheet list - 50% height */}
-          <div className="h-1/2 flex-shrink-0 border-b border-zinc-700/50 flex flex-col min-h-0">
-            <SpritesheetList />
-          </div>
-
-          {/* Properties panel - 50% height */}
-          <div className="h-1/2 overflow-hidden min-h-0">
-            <PropertiesPanel />
-          </div>
+        {/* Right panel - Properties */}
+        <div className="w-56 flex-shrink-0 border-l border-zinc-700/50 flex flex-col bg-zinc-800/30 overflow-hidden">
+          <PropertiesPanel />
         </div>
       </div>
 

@@ -24,29 +24,42 @@ export function PropertiesPanel() {
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="h-9 flex-shrink-0 px-3 flex items-center">
-        <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Properties</span>
-      </div>
-
-      <div className="px-3 pb-3 flex flex-col gap-3 overflow-y-auto min-h-0">
-        {/* Key properties - use track type to determine which component */}
-        {selectedKey && trackType === "sprite" && (
-          <SpriteKeyProperties keyData={selectedKey as SpriteKey} />
-        )}
-        {selectedKey && trackType === "tween" && (
-          <TweenKeyProperties keyData={selectedKey as TweenKey} />
-        )}
-        {selectedKey && trackType === "event" && (
-          <EventKeyProperties keyData={selectedKey as EventKey} />
-        )}
-
-        {/* No key selected */}
-        {!selectedKey && (
-          <div className="text-xs text-zinc-500 text-center py-4">
-            Select a keyframe to view properties
+      {/* Key properties - use track type to determine which component */}
+      {selectedKey && trackType === "sprite" && (
+        <SpriteKeyProperties keyData={selectedKey as SpriteKey} />
+      )}
+      {selectedKey && trackType === "tween" && (
+        <div className="flex flex-col h-full min-h-0">
+          <div className="h-9 flex-shrink-0 px-3 flex items-center border-b border-zinc-700/50">
+            <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Properties</span>
           </div>
-        )}
-      </div>
+          <div className="flex-shrink-0 p-3">
+            <TweenKeyProperties keyData={selectedKey as TweenKey} />
+          </div>
+        </div>
+      )}
+      {selectedKey && trackType === "event" && (
+        <div className="flex flex-col h-full min-h-0">
+          <div className="h-9 flex-shrink-0 px-3 flex items-center border-b border-zinc-700/50">
+            <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Properties</span>
+          </div>
+          <div className="flex-shrink-0 p-3">
+            <EventKeyProperties keyData={selectedKey as EventKey} />
+          </div>
+        </div>
+      )}
+
+      {/* No key selected */}
+      {!selectedKey && (
+        <div className="flex flex-col h-full">
+          <div className="h-9 flex-shrink-0 px-3 flex items-center border-b border-zinc-700/50">
+            <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Properties</span>
+          </div>
+          <div className="flex-1 flex items-center justify-center text-xs text-zinc-500">
+            Select a keyframe
+          </div>
+        </div>
+      )}
     </div>
   );
 }

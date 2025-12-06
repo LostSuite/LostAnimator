@@ -50,7 +50,7 @@ interface SpritePickerState {
   keyId?: string;
   time: number;
   initialSpritesheetId?: string;
-  initialFrame?: [number, number];
+  initialFrame?: { x: number; y: number };
 }
 
 // SVG Icons
@@ -349,12 +349,14 @@ export function Timeline() {
         duration: 0.5,
         name: "",
         easing: "Linear",
+        anchors: {},
       });
     } else if (trackType === "event") {
       addKey(trackId, {
         id: keyId,
         time,
         name: "",
+        anchors: {},
       });
     }
     setTrackContextMenu(null);
@@ -438,7 +440,7 @@ export function Timeline() {
 
   // Handle sprite picker confirm
   const handleSpritePickerConfirm = useCallback(
-    (spritesheetId: string, frame: [number, number]) => {
+    (spritesheetId: string, frame: { x: number; y: number }) => {
       if (!spritePicker) return;
 
       if (spritePicker.keyId) {
@@ -455,7 +457,8 @@ export function Timeline() {
           time: spritePicker.time,
           spritesheetId,
           frame,
-          offset: [0, 0],
+          offset: { x: 0, y: 0 },
+          anchors: {},
         });
       }
       setSpritePicker(null);
@@ -551,14 +554,14 @@ export function Timeline() {
     const columns = Math.floor(image.width / defaultSheet.tileWidth);
     const rows = Math.floor(image.height / defaultSheet.tileHeight);
 
-    // Find the last sprite key to get its frame, or start at [-1, 0] to produce [0, 0]
+    // Find the last sprite key to get its frame, or start at { x: -1, y: 0 } to produce { x: 0, y: 0 }
     const lastKey = spriteTrack.keys.length > 0 ? spriteTrack.keys[spriteTrack.keys.length - 1] : null;
 
-    let nextFrame: [number, number];
+    let nextFrame: { x: number; y: number };
     let spritesheetId = defaultSheet.id;
 
     if (lastKey) {
-      const [x, y] = lastKey.frame;
+      const { x, y } = lastKey.frame;
       spritesheetId = lastKey.spritesheetId ?? defaultSheet.id;
 
       // Get the spritesheet for this key to calculate its dimensions
@@ -569,31 +572,32 @@ export function Timeline() {
 
       // Calculate next frame with wrap
       if (x + 1 < keyCols) {
-        nextFrame = [x + 1, y];
+        nextFrame = { x: x + 1, y };
       } else if (y + 1 < keyRows) {
-        nextFrame = [0, y + 1];
+        nextFrame = { x: 0, y: y + 1 };
       } else {
         // Wrap to beginning
-        nextFrame = [0, 0];
+        nextFrame = { x: 0, y: 0 };
       }
     } else {
       // First frame
-      nextFrame = [0, 0];
+      nextFrame = { x: 0, y: 0 };
     }
 
     // Calculate new time based on last key's time, not playhead
     const baseTime = lastKey ? lastKey.time : playback.currentTime;
     const newTime = baseTime + timeline.gridSize;
 
-    // Create the new key (copy offset and flip from last key)
+    // Create the new key (copy offset, flip, and anchors from last key)
     const keyId = crypto.randomUUID();
     addKey(spriteTrack.id, {
       id: keyId,
       time: newTime,
       spritesheetId,
       frame: nextFrame,
-      offset: lastKey ? lastKey.offset : [0, 0],
+      offset: lastKey ? lastKey.offset : { x: 0, y: 0 },
       flip: lastKey?.flip,
+      anchors: lastKey ? { ...lastKey.anchors } : {},
     });
 
     // Select the new key

@@ -2,6 +2,20 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 import { AnimationFile, AnimationFileSchema, createDefaultAnimationFile } from "../types";
 
+/**
+ * Round all numbers in an object to 3 decimal places to avoid floating point errors
+ */
+function roundNumbers(obj: unknown): unknown {
+  if (typeof obj === "number") return Math.round(obj * 1000) / 1000;
+  if (Array.isArray(obj)) return obj.map(roundNumbers);
+  if (obj && typeof obj === "object") {
+    return Object.fromEntries(
+      Object.entries(obj).map(([k, v]) => [k, roundNumbers(v)])
+    );
+  }
+  return obj;
+}
+
 export interface OpenFileResult {
   path: string;
   content: AnimationFile;
@@ -106,7 +120,9 @@ export async function saveAnimationFile(
   // Validate with Zod before saving to ensure data integrity
   const validated = AnimationFileSchema.parse(contentWithRelativePaths);
 
-  await writeTextFile(targetPath, JSON.stringify(validated, null, 2));
+  // Round numbers to avoid floating point precision errors
+  const rounded = roundNumbers(validated);
+  await writeTextFile(targetPath, JSON.stringify(rounded, null, 2));
   return targetPath;
 }
 

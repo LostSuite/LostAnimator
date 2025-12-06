@@ -291,46 +291,44 @@ export function SpritePreview() {
       }
     }
 
-    // Draw tween/event anchors (rendered at canvas center since they're not tied to a sprite)
-    if (otherAnchors.length > 0) {
-      // Get scale from first sprite if available, otherwise use a default
-      let scale = 4; // Default scale
-      if (currentSpriteKeys.length > 0) {
-        const firstKey = currentSpriteKeys[0];
-        const spritesheetData = getSpritesheetForKey(firstKey);
-        if (spritesheetData) {
-          const { tileWidth, tileHeight } = spritesheetData.config;
-          const padding = 16;
-          scale = Math.min(
-            (canvas.width - padding * 2) / tileWidth,
-            (canvas.height - padding * 2) / tileHeight
-          );
+    // Draw tween/event anchors (positioned relative to sprite top-left, same as sprite anchors)
+    if (otherAnchors.length > 0 && currentSpriteKeys.length > 0) {
+      // Use the first sprite's position as reference
+      const firstKey = currentSpriteKeys[0];
+      const spritesheetData = getSpritesheetForKey(firstKey);
+      if (spritesheetData) {
+        const { tileWidth, tileHeight } = spritesheetData.config;
+        const padding = 16;
+        const scale = Math.min(
+          (canvas.width - padding * 2) / tileWidth,
+          (canvas.height - padding * 2) / tileHeight
+        );
+        const dw = tileWidth * scale;
+        const dh = tileHeight * scale;
+        // Use same dx/dy calculation as sprite anchors (top-left of sprite)
+        const dx = (canvas.width - dw) / 2 + firstKey.offset.x * scale;
+        const dy = (canvas.height - dh) / 2 + firstKey.offset.y * scale;
+
+        for (const anchor of otherAnchors) {
+          // Position relative to sprite top-left (same as sprite anchors)
+          const anchorX = dx + (anchor.pos.x + 0.5) * scale;
+          const anchorY = dy + (anchor.pos.y + 0.5) * scale;
+
+          // Draw anchor marker (filled circle with outline)
+          ctx.beginPath();
+          ctx.arc(anchorX, anchorY, 4, 0, Math.PI * 2);
+          ctx.fillStyle = anchor.color;
+          ctx.fill();
+          ctx.strokeStyle = "#000";
+          ctx.lineWidth = 1;
+          ctx.stroke();
+
+          // Draw anchor name label
+          ctx.font = "9px sans-serif";
+          ctx.fillStyle = anchor.color;
+          ctx.textAlign = "left";
+          ctx.fillText(anchor.name, anchorX + 6, anchorY + 3);
         }
-      }
-
-      // Calculate base position (canvas center)
-      const baseDx = (canvas.width - (currentSpriteKeys.length > 0 ? 0 : 0)) / 2;
-      const baseDy = (canvas.height - (currentSpriteKeys.length > 0 ? 0 : 0)) / 2;
-
-      for (const anchor of otherAnchors) {
-        // Position relative to canvas center
-        const anchorX = baseDx + (anchor.pos.x + 0.5) * scale;
-        const anchorY = baseDy + (anchor.pos.y + 0.5) * scale;
-
-        // Draw anchor marker (filled circle with outline)
-        ctx.beginPath();
-        ctx.arc(anchorX, anchorY, 4, 0, Math.PI * 2);
-        ctx.fillStyle = anchor.color;
-        ctx.fill();
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        // Draw anchor name label
-        ctx.font = "9px sans-serif";
-        ctx.fillStyle = anchor.color;
-        ctx.textAlign = "left";
-        ctx.fillText(anchor.name, anchorX + 6, anchorY + 3);
       }
     }
 

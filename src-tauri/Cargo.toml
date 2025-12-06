@@ -1,10 +1,10 @@
 [package]
 name = "lostanimator"
-version = "0.2.2"
+version = "0.2.3"
 description = "A sprite animation editor for game development"
 authors = ["Richard Strømland Egeli"]
 license = "Custom"
-repository = "https://github.com/Long-Lost-AS/LostAnimator"
+repository = "https://github.com/LostSuite/LostAnimator"
 edition = "2021"
 
 [lib]

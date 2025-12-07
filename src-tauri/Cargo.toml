@@ -1,6 +1,6 @@
 [package]
 name = "lostanimator"
-version = "0.2.3"
+version = "0.3.0"
 description = "A sprite animation editor for game development"
 authors = ["Richard Strømland Egeli"]
 license = "Custom"

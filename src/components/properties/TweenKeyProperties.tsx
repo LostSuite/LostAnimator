@@ -16,6 +16,10 @@ const EASING_OPTIONS: { value: EasingType; label: string }[] = [
   { value: "EaseInOut", label: "Ease In Out" },
   { value: "BounceIn", label: "Bounce In" },
   { value: "BounceOut", label: "Bounce Out" },
+  { value: "Step", label: "Step" },
+  { value: "Parabolic", label: "Parabolic" },
+  { value: "ExponentialIn", label: "Exponential In" },
+  { value: "ExponentialOut", label: "Exponential Out" },
 ];
 
 function EasingDropdown({
@@ -122,18 +126,6 @@ export function TweenKeyProperties({ keyData }: TweenKeyPropertiesProps) {
     <>
       {/* Key properties */}
       <div className="flex-shrink-0 flex flex-col gap-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-xs text-zinc-400">Name</span>
-          <input
-            type="text"
-            spellCheck={false}
-            value={keyData.name}
-            onChange={(e) => handleUpdate({ name: e.target.value })}
-            className="bg-zinc-700 rounded px-2 py-1 text-sm"
-            placeholder="tween_name"
-          />
-        </label>
-
         <DragNumberInput
           value={keyData.time}
           onChange={(time) => handleUpdate({ time })}

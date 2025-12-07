@@ -15,6 +15,10 @@ export const EasingTypeSchema = z.enum([
   "EaseInOut",
   "BounceIn",
   "BounceOut",
+  "Step",
+  "Parabolic",
+  "ExponentialIn",
+  "ExponentialOut",
 ]);
 export type EasingType = z.infer<typeof EasingTypeSchema>;
 
@@ -34,7 +38,6 @@ export const TweenKeySchema = z.object({
   id: z.string(),
   time: z.number(),
   duration: z.number(),
-  name: z.string(),
   easing: EasingTypeSchema,
   anchors: z.record(z.string(), PointSchema).default({}),
 });
@@ -43,7 +46,6 @@ export type TweenKey = z.infer<typeof TweenKeySchema>;
 export const EventKeySchema = z.object({
   id: z.string(),
   time: z.number(),
-  name: z.string(),
   anchors: z.record(z.string(), PointSchema).default({}),
 });
 export type EventKey = z.infer<typeof EventKeySchema>;
@@ -111,14 +113,13 @@ export function createTweenKey(
   id: string,
   time: number,
   duration: number,
-  name: string,
   easing: EasingType = "Linear"
 ): TweenKey {
-  return { id, time, duration, name, easing, anchors: {} };
+  return { id, time, duration, easing, anchors: {} };
 }
 
-export function createEventKey(id: string, time: number, name: string): EventKey {
-  return { id, time, name, anchors: {} };
+export function createEventKey(id: string, time: number): EventKey {
+  return { id, time, anchors: {} };
 }
 
 // Utility functions

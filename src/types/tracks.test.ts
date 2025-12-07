@@ -54,26 +54,24 @@ describe("key creators", () => {
 
   describe("createTweenKey", () => {
     it("creates a tween key with default easing", () => {
-      const key = createTweenKey("key-2", 1, 0.5, "scale");
+      const key = createTweenKey("key-2", 1, 0.5);
       expect(key.id).toBe("key-2");
       expect(key.time).toBe(1);
       expect(key.duration).toBe(0.5);
-      expect(key.name).toBe("scale");
       expect(key.easing).toBe("Linear");
     });
 
     it("creates a tween key with custom easing", () => {
-      const key = createTweenKey("key-3", 0, 1, "fade", "EaseInOut");
+      const key = createTweenKey("key-3", 0, 1, "EaseInOut");
       expect(key.easing).toBe("EaseInOut");
     });
   });
 
   describe("createEventKey", () => {
     it("creates an event key", () => {
-      const key = createEventKey("key-4", 2.5, "jump");
+      const key = createEventKey("key-4", 2.5);
       expect(key.id).toBe("key-4");
       expect(key.time).toBe(2.5);
-      expect(key.name).toBe("jump");
     });
   });
 });
@@ -85,12 +83,12 @@ describe("getKeyEndTime", () => {
   });
 
   it("returns time + duration for tween keys", () => {
-    const key = createTweenKey("id", 2, 1, "scale");
+    const key = createTweenKey("id", 2, 1);
     expect(getKeyEndTime(key)).toBe(3);
   });
 
   it("returns just time for event keys (no duration)", () => {
-    const key = createEventKey("id", 1.5, "event");
+    const key = createEventKey("id", 1.5);
     expect(getKeyEndTime(key)).toBe(1.5);
   });
 });
@@ -119,15 +117,15 @@ describe("getTrackDuration", () => {
 
   it("handles event tracks correctly", () => {
     const track = createEventTrack("id", "Test");
-    track.keys.push(createEventKey("k1", 1, "start"));
-    track.keys.push(createEventKey("k2", 3, "end"));
+    track.keys.push(createEventKey("k1", 1));
+    track.keys.push(createEventKey("k2", 3));
     expect(getTrackDuration(track)).toBe(3);
   });
 
   it("handles tween tracks with duration", () => {
     const track = createTweenTrack("id", "Test");
-    track.keys.push(createTweenKey("k1", 0, 0.5, "scale"));
-    track.keys.push(createTweenKey("k2", 1, 0.5, "fade"));
+    track.keys.push(createTweenKey("k1", 0, 0.5));
+    track.keys.push(createTweenKey("k2", 1, 0.5));
     // Tween keys have duration, so max end time is 1 + 0.5 = 1.5
     expect(getTrackDuration(track)).toBe(1.5);
   });

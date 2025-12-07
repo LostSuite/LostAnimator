@@ -20,7 +20,7 @@ import { Playhead } from "./Playhead";
 import { DragNumberInput } from "../ui/DragNumberInput";
 import { SpritePickerModal } from "./SpritePickerModal";
 import { formatTime } from "../../utils/timelineUtils";
-import type { Track } from "../../types";
+import type { Track, SpriteKey } from "../../types";
 
 // Context menu state types
 interface TrackContextMenu {
@@ -347,7 +347,6 @@ export function Timeline() {
         id: keyId,
         time,
         duration: 0.5,
-        name: "",
         easing: "Linear",
         anchors: {},
       });
@@ -355,7 +354,6 @@ export function Timeline() {
       addKey(trackId, {
         id: keyId,
         time,
-        name: "",
         anchors: {},
       });
     }
@@ -370,14 +368,15 @@ export function Timeline() {
     // Find the key to get its current values
     const track = selectedAnimation?.tracks.find((t) => t.id === trackId);
     const key = track?.keys.find((k) => k.id === keyId);
-    if (!key || !("frame" in key)) return; // Type guard for SpriteKey
+    if (!key || !("frame" in key)) return;
+    const spriteKey = key as SpriteKey;
 
     setSpritePicker({
       trackId,
       keyId,
-      time: key.time,
-      initialSpritesheetId: key.spritesheetId ?? spritesheets[0]?.id,
-      initialFrame: key.frame,
+      time: spriteKey.time,
+      initialSpritesheetId: spriteKey.spritesheetId ?? spritesheets[0]?.id,
+      initialFrame: spriteKey.frame,
     });
     setKeyContextMenu(null);
   }, [keyContextMenu, selectedAnimation, spritesheets]);
@@ -423,14 +422,15 @@ export function Timeline() {
         // Find the key to get its current values
         const track = selectedAnimation?.tracks.find((t) => t.id === trackId);
         const key = track?.keys.find((k) => k.id === keyId);
-        if (!key || !("frame" in key)) return; // Type guard for SpriteKey
+        if (!key || !("frame" in key)) return;
+        const spriteKey = key as SpriteKey;
 
         setSpritePicker({
           trackId,
           keyId,
-          time: key.time,
-          initialSpritesheetId: key.spritesheetId ?? spritesheets[0]?.id,
-          initialFrame: key.frame,
+          time: spriteKey.time,
+          initialSpritesheetId: spriteKey.spritesheetId ?? spritesheets[0]?.id,
+          initialFrame: spriteKey.frame,
         });
       }
       // TODO: Add edit dialogs for tween and event keys
